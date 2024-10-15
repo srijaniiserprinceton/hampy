@@ -1,0 +1,6 @@
+*.png
+*.pdf
+*.cdf
+*.tmp
+__pycache__
+*.npy

@@ -1,0 +1,32 @@
+name: pyspedas
+channels:
+  - defaults
+  - conda-forge
+  - anaconda
+  - spedas
+dependencies:
+  - python==3.11.5
+  - numpy==1.26.2
+  - requests==2.31.0
+  - cdflib=0.4.9
+  - cdasws==1.7.43
+  - netCDF4==1.6.2
+  - pywavelets==1.4.1
+  - astropy==5.3.4
+  - ipython==8.15.0
+  - pip==23.3.1
+  - scipy==1.11.4
+  - hapiclient==0.2.5
+  - viresclient==0.11.3
+  - scikit-image==0.23.2
+  - bokeh
+  - jupyter
+  - pip:
+    - wget==3.2
+    - pytplot-mpl-temp>=2.2.1
+    - geopack>=1.0.10
+    - pyspedas==1.5.13
+    - sunpy==5.1.3
+    - astrospice==0.2.1
+    - spherepy==0.0.9
+    - tqdm
