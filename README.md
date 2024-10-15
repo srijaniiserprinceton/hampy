@@ -11,9 +11,9 @@ The required directory structure can be build by running the following lines in 
 ```
 mkdir data plots
 ```
-To get the interactive `hammerfinder` plot execute the following line in your command line
+To get the interactive `hammerfinder` plot first run `ipython` in your command line to enter `IPython` mode. Next, execute the following line in your `IPython` terminal.
 ```
-python interactive_hammerchecks.py
+run interactive_hammerchecks.py
 ```
 It should load an interactive plotting widget where you can change the time by clicking the time index bar at the bottom of the plot.
 
