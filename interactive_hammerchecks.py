@@ -147,12 +147,13 @@ def softham_finder(hammerline, intdip_threshold=0.5):
            edgecase_hammer, secondminval_idx
 
 if __name__=='__main__':
-    # user defined date 
-    year, month, date = 2020, 1, 29   # OG hammerhead
-    # year, month, date = 2023, 6, 22
-    # initial timestamp for interactive image
-    hour, minute, second = 18, 10, 1    # OG hammerhead
-    # hour, minute, second = 5, 58, 55
+    # user defined date and time
+    year, month, date = 2020, 1, 29
+    hour, minute, second = 18, 10, 1
+
+    # timestamp for Verniero et al 2022 hammerhead
+    # year, month, date = 2020, 1, 29
+    # hour, minute, second = 18, 10, 1
 
     # creating the 1D and 3D convolution matrices once for the entire runtime
     convmat = convolve_hammergap()
