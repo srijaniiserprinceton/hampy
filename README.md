@@ -9,7 +9,7 @@ In order to get started, you need to have a Python environment with all the pack
 
 The required directory structure can be build by running the following lines in your command line
 ```
-mkdir data plots
+mkdir data
 ```
 To get the interactive `hammerfinder` plot first run `ipython` in your command line to enter `IPython` mode. Next, execute the following line in your `IPython` terminal.
 ```
