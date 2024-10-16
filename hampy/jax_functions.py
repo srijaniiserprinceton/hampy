@@ -10,9 +10,8 @@ def convolve2d_w_vdf(logvdf_2d, kernel_2d):
     return convolve2d(logvdf_2d, kernel_2d, mode='same')
 
 def detect_gap_1d(logvdf_2d, kernel, Ngap=2):
-    # we choose 20 elements because it is unlikely that there
-    # will be more than 20 gaps in any VDF
-    print('New kernel shape')
+    # we choose 8*32 elements because of SPAN instrument grid constraints
+    print('New kernel shape detected')
     gap_xvals_1d = jnp.zeros(8 * 32, dtype='int32')
     gap_yvals_1d = jnp.zeros(8 * 32, dtype='int32')
     Ngaps_1D = 0
@@ -30,7 +29,7 @@ def detect_gap_1d(logvdf_2d, kernel, Ngap=2):
 
         vel_indices = jnp.arange(32)
         gap_xvals_angleidx = jnp.extract(convmat1d == Ngap, vel_indices, size=32, fill_value=0)
-        gap_yvals_angleidx = jnp.extract(convmat1d == Ngap, jnp.ones(32,dtype='int32')*angle_idx, size=32, fill_value=0)
+        gap_yvals_angleidx = jnp.extract(convmat1d == Ngap, jnp.ones(32, dtype='int32') * angle_idx, size=32, fill_value=0)
 
         gap_xvals_1d = dynamic_update_slice(gap_xvals_1d, gap_xvals_angleidx, (32*angle_idx,))
         gap_yvals_1d = dynamic_update_slice(gap_yvals_1d, gap_yvals_angleidx, (32*angle_idx,))
