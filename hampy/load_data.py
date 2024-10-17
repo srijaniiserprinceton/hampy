@@ -38,6 +38,31 @@ class span:
         for i in range(delta.days + 1):
             self.day_arr = np.append(self.day_arr, self.tstart + timedelta(days=i))
 
+    def get_VDFdict_at_day(self, cdf_VDfile):
+        epochSlice  = cdf_VDfile['EPOCH'][self.tidx_start: self.tidx_end]
+        thetaSlice  = cdf_VDfile['THETA'][self.tidx_start: self.tidx_end,:]
+        phiSlice    = cdf_VDfile['PHI'][self.tidx_start: self.tidx_end,:]
+        energySlice = cdf_VDfile['ENERGY'][self.tidx_start: self.tidx_end,:]
+        efluxSlice  = cdf_VDfile['EFLUX'][self.tidx_start: self.tidx_end,:]
+
+        mass_p = 0.010438870      #proton mass in units eV/c^2 where c = 299792 km/s
+        charge_p = 1              #proton charge in units eV
+
+        # Define VDF
+        numberFluxSlice = efluxSlice/energySlice
+        vdfSlice = numberFluxSlice*(mass_p**2)/((2E-5)*energySlice)
+
+        # making the dictionary
+        vdf_bundle = {}
+
+        vdf_bundle['epoch'] = epochSlice
+        vdf_bundle['vdf'] = vdfSlice
+        vdf_bundle['theta'] = thetaSlice
+        vdf_bundle['phi'] = phiSlice
+        vdf_bundle['energy'] = energySlice
+
+        return vdf_bundle
+
     def start_new_day(self, day_idx):
         self.tidx_start, self.tidx_end, self.VDF_dict = None, None, {}
 
@@ -45,16 +70,19 @@ class span:
         fullday_dat = self.download_VDF_file(self.day_arr[day_idx])
 
         # getting the limits in time index for this day
+        epoch = cdflib.cdfepoch.to_datetime(fullday_dat['EPOCH'])
         if(self.datetstart_flag[day_idx] == 1):
-            epoch = cdflib.cdfepoch.to_datetime(fullday_dat['EPOCH'])
             self.tidx_start = bisect.bisect_left(epoch, np.datetime64(self.tstart))
+        else: 
+            self.tidx_start = 0
         if(self.datetend_flag[day_idx] == 1):
-            epoch = cdflib.cdfepoch.to_datetime(fullday_dat['EPOCH'])
             self.tidx_end = bisect.bisect_left(epoch, np.datetime64(self.tend))
+        else: 
+            self.tidx_end = len(epoch)
 
         # clipping the VDF data in time for this day
-        for dat_key in fullday_dat.keys():
-            self.VDF_dict[dat_key] = fullday_dat[dat_key][self.tidx_start:self.tidx_end]
+        self.VDF_dict = self.get_VDFdict_at_day(fullday_dat)
+
 
     def VDfile_directoryRemote(self, user_datetime):
         '''

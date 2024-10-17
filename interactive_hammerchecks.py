@@ -149,14 +149,14 @@ def softham_finder(hammerline, intdip_threshold=0.5):
 
 if __name__=='__main__':
     # user defined date and time
-    year, month, date = 2020, 2, 25
+    year, month, date = 2020, 1, 29
     hour, minute, second = 18, 10, 1
 
     # timestamp for Verniero et al 2022 hammerhead
     # year, month, date = 2020, 1, 29
     # hour, minute, second = 18, 10, 1
 
-    # creating the 1D and 3D convolution matrices once for the entire runtime
+    # creating the 1D and 2D convolution matrices once for the entire runtime
     convmat = convolve_hammergap()
 
     # converting to datetime format to extract time index
@@ -184,32 +184,6 @@ if __name__=='__main__':
     cmap = 'inferno'
 
     # DATA FORMAT OF THE VDF: phi is along dimension 0, while theta is along 2
-    # choosing a cut through phi for plotting
-    phi_cut=0 
-
-    phi_plane = vdf_dict['phi'][phi_cut,:,:]
-    theta_plane = vdf_dict['theta'][phi_cut,:,:]
-    energy_plane = vdf_dict['energy'][phi_cut,:,:]
-    vel_plane = np.sqrt(2 * charge_p * energy_plane / mass_p)
-
-    # VDF as a function of energy and theta (phi axis is summed over)
-    df_theta = np.nansum(vdf_dict['vdf'], axis=0)
-
-    vx_plane_theta = vel_plane * np.cos(np.radians(phi_plane)) * np.cos(np.radians(theta_plane))
-    vy_plane_theta = vel_plane * np.sin(np.radians(phi_plane)) * np.cos(np.radians(theta_plane))
-    vz_plane_theta = vel_plane *                                 np.sin(np.radians(theta_plane))
-
-    vmin, vmax = -1, 8
-    im0 = ax[0].contourf(vx_plane_theta, vz_plane_theta, np.log10(df_theta),
-                           cmap=cmap, rasterized='True', vmin=vmin, vmax=vmax)
-
-    ax[0].set_xlim(-1000,0)
-    ax[0].set_ylim(-500,500)
-    ax[0].set_xlabel('$v_x$ km/s')
-    ax[0].set_ylabel('$v_z$ km/s')
-    ax[0].set_title('VDF SPAN-I $\\theta$-plane')
-    ax[0].set_aspect('equal')
-
     # choosing a cut through theta for plotting 
     theta_cut = 1
 
@@ -225,6 +199,7 @@ if __name__=='__main__':
     vy_plane_phi = vel_plane * np.sin(np.radians(phi_plane)) * np.cos(np.radians(theta_plane))
     vz_plane_phi = vel_plane *                                 np.sin(np.radians(theta_plane))
 
+    vmin, vmax = -1, 8
     im1 = ax[1].contourf(np.transpose(vx_plane_phi), np.transpose(vy_plane_phi), np.log10(np.transpose(df_phi)),
                            cmap=cmap, rasterized='True', vmin=vmin, vmax=vmax)
 
@@ -235,22 +210,46 @@ if __name__=='__main__':
     ax[1].set_title('VDF SPAN-I $\\phi$-plane')
     ax[1].set_aspect('equal')
 
+    # choosing a cut through phi for plotting
+    phi_cut=0 
+
+    phi_plane = vdf_dict['phi'][phi_cut,:,:]
+    theta_plane = vdf_dict['theta'][phi_cut,:,:]
+    energy_plane = vdf_dict['energy'][phi_cut,:,:]
+    vel_plane = np.sqrt(2 * charge_p * energy_plane / mass_p)
+
+    # VDF as a function of energy and theta (phi axis is summed over)
+    df_theta = np.nansum(vdf_dict['vdf'], axis=0)
+
+    vx_plane_theta = vel_plane * np.cos(np.radians(phi_plane)) * np.cos(np.radians(theta_plane))
+    vy_plane_theta = vel_plane * np.sin(np.radians(phi_plane)) * np.cos(np.radians(theta_plane))
+    vz_plane_theta = vel_plane *                                 np.sin(np.radians(theta_plane))
+
+    im0 = ax[0].contourf(vx_plane_theta, vz_plane_theta, np.log10(df_theta),
+                           cmap=cmap, rasterized='True', vmin=vmin, vmax=vmax)
+
+    ax[0].set_xlim(-1000,0)
+    ax[0].set_ylim(-500,500)
+    ax[0].set_xlabel('$v_x$ km/s')
+    ax[0].set_ylabel('$v_z$ km/s')
+    ax[0].set_title('VDF SPAN-I $\\theta$-plane')
+    ax[0].set_aspect('equal')
 
     # converting the VDF as a function of energy and theta to log space
     log_df_theta = gen_log_df(df_theta)
 
     # velocity grid for interpolation
     v = np.linspace(200, 1000, 31)
-    t = np.linspace(90, 180, 30)
+    t = np.linspace(-45, 55, 30)
     vv, tt = np.meshgrid(v, t, indexing='ij')
 
     # interpolating the log df for better resolution of the expected dip of hammerhead
-    log_df_theta_interp = griddata((vel_plane.flatten(), phi_plane.flatten()), log_df_theta.T.flatten(), (vv,tt))
+    log_df_theta_interp = griddata((vel_plane.flatten(), theta_plane.flatten()), log_df_theta.flatten(), (vv,tt))
     log_df_theta = np.nan_to_num(log_df_theta_interp)
 
     im2 =  ax[2].pcolormesh(vv, tt, log_df_theta, cmap='binary_r')
     ax[2].set_xlim([0, 1000])
-    ax[2].set_ylim([85, 185])
+    ax[2].set_ylim([-55, 55])
 
     # making twin axis to plot the sum in theta for each velocity bin
     twax = ax[2].twinx()
@@ -313,7 +312,7 @@ if __name__=='__main__':
         log_df_theta = gen_log_df(df_theta)
         # interpolating the log_df_theta
         log_df_theta_span = log_df_theta.T * 1.0   # creating a copy of the true SPAN data for convolution tests
-        log_df_theta_interp = griddata((vel_plane.flatten(), phi_plane.flatten()), log_df_theta.T.flatten(), (vv,tt))
+        log_df_theta_interp = griddata((vel_plane.flatten(), theta_plane.flatten()), log_df_theta.flatten(), (vv,tt))
         log_df_theta = np.nan_to_num(log_df_theta_interp)
         im2.set_array(log_df_theta)
 
