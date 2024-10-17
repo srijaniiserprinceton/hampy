@@ -2,6 +2,7 @@ import numpy as np
 import cdflib, bisect, sys
 from datetime import datetime
 import matplotlib.pyplot as plt; plt.ion(); plt.style.use('dark_background')
+# import matplotlib; matplotlib.use('tkagg')
 from matplotlib.widgets import Slider, Button, RadioButtons
 from matplotlib import ticker
 from scipy.signal import savgol_filter, convolve2d
@@ -148,7 +149,7 @@ def softham_finder(hammerline, intdip_threshold=0.5):
 
 if __name__=='__main__':
     # user defined date and time
-    year, month, date = 2020, 2, 2
+    year, month, date = 2020, 2, 25
     hour, minute, second = 18, 10, 1
 
     # timestamp for Verniero et al 2022 hammerhead

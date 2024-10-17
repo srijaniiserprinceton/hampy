@@ -135,7 +135,7 @@ def theta_phi_cuts(vdf_dict, theta_cut=0, phi_cut=1, cmap='plasma'):
 
 if __name__=='__main__':
     year, month, date = 2020, 1, 29
-    hour, minute, second = 18, 10, 2
+    hour, minute, second = 18, 10, 1
 
     user_datetime = datetime(year, month, date)
 
