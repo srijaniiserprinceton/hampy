@@ -18,7 +18,7 @@ if __name__=='__main__':
 
     # velocity grid for span-grid interpolation for soft-hammerhead check
     v = np.linspace(200, 1000, 31)
-    t = np.linspace(90, 180, 30)
+    t = np.linspace(-55, 55, 30)
     vv, tt = np.meshgrid(v, t, indexing='ij')
 
     # creating the 1D and 3D convolution matrices once for the entire runtime
@@ -55,7 +55,7 @@ if __name__=='__main__':
 
             # interpolating the log_df_theta
             log_df_theta_span = log_df_theta.T * 1.0   # creating a copy of the true SPAN data for convolution tests
-            log_df_theta_interp = griddata((vel_plane.flatten(), phi_plane.flatten()), log_df_theta.T.flatten(), (vv, tt))
+            log_df_theta_interp = griddata((vel_plane.flatten(), theta_plane.flatten()), log_df_theta.flatten(), (vv, tt))
             log_df_theta = np.nan_to_num(log_df_theta_interp)
             
             # finding the 1D line for soft-hammerhead check

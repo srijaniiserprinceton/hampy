@@ -172,7 +172,7 @@ if __name__=='__main__':
     tSliceIndex  = bisect.bisect_left(epoch, timeSlice)
     
     # getting the VDF dictionary at the desired timestamp
-    vdf_dict = get_data.get_VDFdict_at_t(cdf_VDfile, tSliceIndex)
+    vdf_dict = get_data.get_VDFdict_at_t(cdf_VDfile, tSliceIndex)   # check 9328
 
     # creating the first snapshot of the interactive figure
     fig, ax = plt.subplots(1, 3, figsize=(15,10))
