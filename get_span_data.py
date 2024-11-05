@@ -1,4 +1,4 @@
-import wget, cdflib, bisect, sys
+import wget, cdflib, bisect, sys, pyspedas
 import numpy as np
 from datetime import datetime
 import os.path
@@ -48,6 +48,17 @@ def download_VDF_file(user_datetime):
 
     return dat
 
+def download_L3_data(user_datetime):
+    yyyy, mm, dd = user_datetime.year, user_datetime.month, user_datetime.day
+
+    trange = [f'{yyyy}-{mm}-{dd}/00:00:00', f'{yyyy}-{mm}-{dd}/23:59:59']
+    spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00_l3_mom', level='l3',
+                                time_clip=True, get_support_data= True, varnames=['*'],
+                                notplot=True, downloadonly=True)
+    dat = cdflib.CDF(spi_vars[0])
+
+    return dat
+
 def get_VDFdict_at_t(cdf_VDfile, tSliceIndex):
     epochSlice  = cdf_VDfile['EPOCH'][tSliceIndex]
     thetaSlice  = cdf_VDfile['THETA'][tSliceIndex,:]
@@ -69,6 +80,15 @@ def get_VDFdict_at_t(cdf_VDfile, tSliceIndex):
     vdf_bundle['energy'] = energySlice
 
     return vdf_bundle
+
+def get_L3_monents_at_t(L3_data, tSliceIndex):
+    # making the dictionary
+    l3_data_bundle = {}
+
+    # extracting out the required L3 data
+    l3_data_bundle['MAGF_INST'] = L3_data['MAGF_INST'][tSliceIndex,:]
+
+    return l3_data_bundle
 
 def theta_phi_cuts(vdf_dict, theta_cut=0, phi_cut=1, cmap='plasma'):
     # theta is along dimension 0, while phi is along 2
