@@ -138,3 +138,5 @@ class convolve_hammergap:
 
         self.gap_xvals_1D = self.gap_xvals_1D[1:]
         self.gap_yvals_1D = self.gap_yvals_1D[1:]
+
+    # def find_1d_gap()
