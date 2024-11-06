@@ -15,6 +15,8 @@ import get_span_data as get_data
 mass_p = 0.010438870      #proton mass in units eV/c^2 where c = 299792 km/s
 charge_p = 1              #proton charge in units eV
 
+NAX = np.newaxis
+
 def gen_log_df(df_theta):
     log_df_theta = np.nan_to_num(np.log10(df_theta), nan=np.nan, posinf=np.nan, neginf=np.nan)
 
@@ -71,6 +73,8 @@ class convolve_hammergap:
         self.gap_xvals_2D = np.array([0])
         self.gap_yvals_2D = np.array([0])
         self.Ngaps_2D = 0
+        self.orientation_2D = np.array(['x'])
+        self.ngaps_arr = np.array([0])
 
         log_VDF = np.nan_to_num(log_VDF * 1.0)
         mask_vdf = log_VDF <= np.nanmin(log_VDF[log_VDF > 0])
@@ -85,6 +89,8 @@ class convolve_hammergap:
                 print(xarr[0], yarr[0], self.gap_xvals_2D)
                 self.gap_xvals_2D = np.append(self.gap_xvals_2D, xarr[0])
                 self.gap_yvals_2D = np.append(self.gap_yvals_2D, yarr[0])
+                self.orientation_2D = np.append(self.orientation_2D, 'n')
+                self.ngaps_arr = np.append(self.ngaps_arr, Ngap)
 
             hammermat = self.gap_mat_2D[f'{Ngap}_r']
             convmat = convolve2d(mask_vdf, hammermat, mode='same')
@@ -94,9 +100,13 @@ class convolve_hammergap:
                 xarr, yarr = np.where(convmat == Ngap)
                 self.gap_xvals_2D = np.append(self.gap_xvals_2D, xarr[0]-1)
                 self.gap_yvals_2D = np.append(self.gap_yvals_2D, yarr[0])
+                self.orientation_2D = np.append(self.orientation_2D, 'r')
+                self.ngaps_arr = np.append(self.ngaps_arr, Ngap)
 
         self.gap_xvals_2D = self.gap_xvals_2D[1:]
         self.gap_yvals_2D = self.gap_yvals_2D[1:]
+        self.orientation_2D = self.orientation_2D[1:]
+        self.ngaps_arr = self.ngaps_arr[1:]
 
     def conv1d_w_VDF(self, log_VDF):
         # reinitializing for a new VDF analysis
@@ -146,6 +156,59 @@ def softham_finder(hammerline, intdip_threshold=0.5):
 
     return hammerline_sm, np.sum(np.diff(hammerline_sm[maxval_idx:minval_idx])>0)>0, peak_idx + maxval_idx,\
            edgecase_hammer, secondminval_idx
+
+def get_st_line(p1, p2, x):
+    x1, y1 = p1
+    x2, y2 = p2
+
+    m = (y1-y2)/(x1-x2)
+    b = (x1*y2 - x2*y1)/(x1-x2)
+
+    return m * x + b
+
+def hamslicer(vdf_2d, gap_ylocs, gap_xlocs, orientation, ngaps_arr):
+    uppergap_xlocs, uppergap_ylocs = gap_xlocs[orientation=='n'], gap_ylocs[orientation=='n']
+    lowergap_xlocs, lowergap_ylocs = gap_xlocs[orientation=='r'], gap_ylocs[orientation=='r']
+
+    upper_ngaps, lower_ngaps = ngaps_arr[orientation=='n'], ngaps_arr[orientation=='r']
+
+    upperlimx_core, upperlimy_core = np.max(uppergap_xlocs), uppergap_ylocs[np.argmax(uppergap_xlocs)]
+    lowerlimx_core, lowerlimy_core = np.max(lowergap_xlocs), lowergap_ylocs[np.argmax(lowergap_xlocs)]
+
+    upperlimx_hammer, upperlimy_hammer = upperlimx_core + upper_ngaps[np.argmax(uppergap_xlocs)], upperlimy_core
+    lowerlimx_hammer, lowerlimy_hammer = lowerlimx_core + lower_ngaps[np.argmax(lowergap_xlocs)], lowerlimy_core
+
+    # making masks for core, neck and hammerhead
+    coremask = np.ones_like(vdf_2d, dtype='bool')
+    neckmask = np.ones_like(vdf_2d, dtype='bool')
+    hammermask = np.ones_like(vdf_2d, dtype='bool')
+
+    # making a 2D index grid
+    mgrid = np.mgrid[0:vdf_2d.shape[0], 0:vdf_2d.shape[1]]
+
+    # making the straight lines to connect (upperlimx_core, upperlimy_core) to (lowerlimx_core, lowerlimy_core)
+    # and (upperlimx_hammer, upperlimy_hammer) to (lowerlimx_hammer, lowerlimy_hammer)
+    coreedge_line = get_st_line((upperlimy_core, upperlimx_core-2),
+                                (lowerlimy_core, lowerlimx_core-2), 
+                                 mgrid[0][:,0])
+    hammeredge_line = get_st_line((upperlimy_hammer, upperlimx_hammer-2),
+                                  (lowerlimy_hammer, lowerlimx_hammer-2), 
+                                   mgrid[0][:,0])
+
+    # finding the mask below the core edge line and above the hammeredgeline
+    coremask[mgrid[1] > coreedge_line[:,NAX]] = False
+    hammermask[mgrid[1] < hammeredge_line[:,NAX]] = False
+
+    coremask[upperlimy_core:, :upperlimx_core] = True
+    coremask[:lowerlimy_core, lowerlimx_core:] = False
+
+    hammermask[upperlimy_hammer:, :upperlimx_hammer-1] = False
+    hammermask[:lowerlimy_hammer, lowerlimx_hammer:] = True
+
+    # filling in the neck mask
+    neckmask = ~(coremask + hammermask)
+
+    return coremask, neckmask, hammermask
 
 if __name__=='__main__':
     # user defined date and time

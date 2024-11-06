@@ -74,10 +74,10 @@ def get_VDFdict_at_t(cdf_VDfile, tSliceIndex):
     vdf_bundle = {}
 
     vdf_bundle['t_index'] = tSliceIndex
-    vdf_bundle['vdf'] = vdfSlice
-    vdf_bundle['theta'] = thetaSlice
-    vdf_bundle['phi'] = phiSlice
-    vdf_bundle['energy'] = energySlice
+    vdf_bundle['vdf'] = vdfSlice[:,::-1,:]
+    vdf_bundle['theta'] = thetaSlice[:,::-1,:]
+    vdf_bundle['phi'] = phiSlice[:,::-1,:]
+    vdf_bundle['energy'] = energySlice[:,::-1,:]
 
     return vdf_bundle
 

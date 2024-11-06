@@ -14,6 +14,10 @@ def plot_2D_vdf(vdf_slice, xx, yy):
     plt.figure()
     plt.contourf(xx, yy, np.log10(vdf_slice), cmap='inferno', vmin=-1, vmax=8)
     plt.colorbar()
+
+    # making scatter plots of the grids
+    plt.scatter(xx.flatten(), yy.flatten(), color='grey', alpha=0.5, s=5)
+
     plt.xlabel('VX [km/s]')
     plt.ylabel('VZ [km/s]')
     plt.xlim(-1000,100)
@@ -96,13 +100,27 @@ if __name__=='__main__':
     # finding the angle between b vector and instrument
     Bx, By, Bz = vdf_dict['MAGF_INST']
     Bmag = np.sqrt(Bx**2 + Bz**2)
-    rot_angle = np.arccos(Bx/Bmag) * 180/np.pi
+    rot_angle =  -1. * np.arccos(Bx/Bmag) * 180/np.pi
 
-    # rotating the vx and vz
-    vx_, vz_ = rotate_coordinates(-rot_angle, vx_plane_theta, vz_plane_theta)
+    # # rotating the vx and vz
+    # vx_, vz_ = rotate_coordinates(rot_angle, vx_plane_theta, vz_plane_theta)
 
-    # plotting vdf on rotated coordinates
-    plot_2D_vdf(df_theta, vx_, vz_)
+    # # plotting vdf on rotated coordinates
+    # plot_2D_vdf(df_theta, vx_, vz_)
+
+    # rotating using a different method
+    theta_plane = theta_plane + rot_angle
+    vx_plane_theta = vel_plane * np.cos(np.radians(phi_plane)) * np.cos(np.radians(theta_plane))
+    vy_plane_theta = vel_plane * np.sin(np.radians(phi_plane)) * np.cos(np.radians(theta_plane))
+    vz_plane_theta = vel_plane *                                 np.sin(np.radians(theta_plane))
+
+    # plotting vdf on new rotated grids
+    plot_2D_vdf(df_theta, vx_plane_theta, vz_plane_theta)
+
+    # plotting in the velocity-theta grid
+
+    plt.figure()
+    plt.pcolormesh(vel_plane, theta_plane, np.log10(df_theta))
 
 
 
