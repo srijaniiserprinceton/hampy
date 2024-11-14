@@ -11,6 +11,7 @@ from scipy.interpolate import griddata
 # custom script imports
 import get_span_data as get_data
 from hampy import nonjax_functions as f
+from hampy import comp_moments
 
 # global variables
 mass_p = 0.010438870      #proton mass in units eV/c^2 where c = 299792 km/s
@@ -18,6 +19,7 @@ charge_p = 1              #proton charge in units eV
 
 NAX = np.newaxis
 
+'''
 def gen_log_df(df_theta):
     log_df_theta = np.nan_to_num(np.log10(df_theta), nan=np.nan, posinf=np.nan, neginf=np.nan)
 
@@ -235,10 +237,11 @@ def softham_finder(hammerline, intdip_threshold=0.5):
 
     return hammerline_sm, np.sum(np.diff(hammerline_sm[maxval_idx:minval_idx])>0)>0, peak_idx + maxval_idx,\
            edgecase_hammer, secondminval_idx
+'''
 
 if __name__=='__main__':
     # user defined date and time
-    year, month, date = 2020, 1, 31
+    year, month, date = 2020, 1, 29
     hour, minute, second = 18, 10, 1
 
     # timestamp for Verniero et al 2022 hammerhead
@@ -257,7 +260,7 @@ if __name__=='__main__':
     # convert time
     epoch = cdflib.cdfepoch.to_datetime(cdf_VDfile['EPOCH'])
     # find index for desired timeslice
-    tSliceIndex  = 9775 #bisect.bisect_left(epoch, timeSlice) # check 9325, 9309
+    tSliceIndex  = bisect.bisect_left(epoch, timeSlice) # check 9325, 9309
     
     # getting the VDF dictionary at the desired timestamp
     vdf_dict = get_data.get_VDFdict_at_t(cdf_VDfile, tSliceIndex)
@@ -265,7 +268,7 @@ if __name__=='__main__':
     # convert time
     epoch = cdflib.cdfepoch.to_datetime(l3_data['EPOCH'])
     # find index for desired timeslice
-    tSliceIndex  = 9775 #bisect.bisect_left(epoch, timeSlice)
+    tSliceIndex  = bisect.bisect_left(epoch, timeSlice)
     # getting the required l3 data dictionary
     l3_data_dict = get_data.get_L3_monents_at_t(l3_data, tSliceIndex)
 
@@ -324,7 +327,7 @@ if __name__=='__main__':
     vz_plane_theta = vel_plane *                                 np.sin(np.radians(theta_plane))
 
     # converting the VDF as a function of energy and theta to log space
-    log_df_theta_span = gen_log_df(df_theta).T
+    log_df_theta_span = f.gen_log_df(df_theta).T
 
     # # getting the core, neck and hammer component
     # convmat.conv2d_w_VDF(log_df_theta_span)
@@ -341,7 +344,7 @@ if __name__=='__main__':
     vel_hamlet = vel_sc + 1.0 * valfven
 
     # creating the 1D and 2D convolution matrices once for the entire runtime
-    convmat = convolve_hammergap(vx_plane_theta, vz_plane_theta)
+    convmat = f.convolve_hammergap(vx_plane_theta, vz_plane_theta)
     convmat.conv1d_w_VDF(log_df_theta_span)
     convmat.conv2d_w_VDF(log_df_theta_span)
     convmat.merge_1D_2D(np.where(log_df_theta_span == np.nanmax(log_df_theta_span))[0][0])
@@ -366,7 +369,7 @@ if __name__=='__main__':
     ax[0].set_ylim(-500,500)
     ax[0].set_xlabel('$v_x$ km/s')
     ax[0].set_ylabel('$v_z$ km/s')
-    ax[0].set_title('VDF SPAN-I $\\theta$-plane')
+    ax[0].set_title(f'{str(epoch[int(tSliceIndex)])}')
     ax[0].set_aspect('equal')
 
     # velocity grid for interpolation
@@ -390,7 +393,7 @@ if __name__=='__main__':
     # unsmoothened pixsum line
     [pixsum_line] = twax.plot(v, pixsum, 'r')
     # detecting the presence of soft hammerhead
-    hammerline_sm, hammerflag, peak_idx, isedgecase, intdip_idx = softham_finder(pixsum)
+    hammerline_sm, hammerflag, peak_idx, isedgecase, intdip_idx = f.softham_finder(pixsum)
     # smoothened pixsum line (on which dipfinder works)
     [pixsum_line_sm] = twax.plot(v, hammerline_sm, '--r')
     # plotting points of intermediate dips (where we have a neck before the maximum pixsum region) [for very large beams]
@@ -430,7 +433,7 @@ if __name__=='__main__':
         ax[1].clear()
 
         df_theta = np.nansum(vdf_dict['vdf'], axis=0)
-        log_df_theta = gen_log_df(df_theta)
+        log_df_theta = f.gen_log_df(df_theta)
         # interpolating the log_df_theta
         log_df_theta_span = log_df_theta.T * 1.0   # creating a copy of the true SPAN data for convolution tests
         ax[0].pcolormesh(vx_plane_theta.T, vz_plane_theta.T, log_df_theta_span,
@@ -441,7 +444,7 @@ if __name__=='__main__':
         ax[0].set_aspect('equal')
         ax[0].set_xlabel('$v_x$ km/s')
         ax[0].set_ylabel('$v_z$ km/s')
-        ax[0].set_title('VDF SPAN-I $\\theta$-plane')
+        ax[0].set_title(f'{str(epoch[int(time_slider.val)])}')
         ax[0].plot(sw_x, sw_y, '--w')
 
         df_phi = np.nansum(vdf_dict['vdf'], axis=2)
@@ -463,7 +466,7 @@ if __name__=='__main__':
         pixsum_line.set_ydata(pixsum)
 
         # detecting soft hammerhead
-        hammerline_sm, hammerflag, peak_idx, isedgecase, intdip_idx = softham_finder(pixsum)
+        hammerline_sm, hammerflag, peak_idx, isedgecase, intdip_idx = f.softham_finder(pixsum)
         pixsum_line_sm.set_ydata(hammerline_sm)
         intdip_point.set_data([v[intdip_idx]], [hammerline_sm[intdip_idx]])
         dip_point.set_data(v[peak_idx], hammerline_sm[peak_idx])
@@ -486,7 +489,7 @@ if __name__=='__main__':
                 ax[0].set_aspect('equal')
                 ax[0].set_xlabel('$v_x$ km/s')
                 ax[0].set_ylabel('$v_z$ km/s')
-                ax[0].set_title('VDF SPAN-I $\\theta$-plane')
+                ax[0].set_title(f'{str(epoch[int(time_slider.val)])}')
                 ax[0].plot(sw_x, sw_y, '--w')
                 ax[0].scatter(vx_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D],
                               vz_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D], marker='o', color='red')
@@ -510,7 +513,7 @@ if __name__=='__main__':
                     ax[0].set_aspect('equal')
                     ax[0].set_xlabel('$v_x$ km/s')
                     ax[0].set_ylabel('$v_z$ km/s')
-                    ax[0].set_title('VDF SPAN-I $\\theta$-plane')
+                    ax[0].set_title(f'{str(epoch[int(time_slider.val)])}')
                 
                 except:
                     ax[0].pcolormesh(vx_plane_theta.T, vz_plane_theta.T, log_df_theta_span,
@@ -521,7 +524,7 @@ if __name__=='__main__':
                     ax[0].set_aspect('equal')
                     ax[0].set_xlabel('$v_x$ km/s')
                     ax[0].set_ylabel('$v_z$ km/s')
-                    ax[0].set_title('VDF SPAN-I $\\theta$-plane')
+                    ax[0].set_title(f'{str(epoch[int(time_slider.val)])}')
                     ax[0].scatter(vx_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D],   
                               vz_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D], marker='o', color='red')
                     ax[0].scatter(vx_plane_theta[convmat.gap_yvals_2D, convmat.gap_xvals_2D],

@@ -56,12 +56,23 @@ class span:
         vdf_bundle = {}
 
         vdf_bundle['epoch'] = epochSlice
-        vdf_bundle['vdf'] = vdfSlice
-        vdf_bundle['theta'] = thetaSlice
-        vdf_bundle['phi'] = phiSlice
-        vdf_bundle['energy'] = energySlice
+        vdf_bundle['vdf'] = vdfSlice[:,:,::-1,:]
+        vdf_bundle['theta'] = thetaSlice[:,:,::-1,:]
+        vdf_bundle['phi'] = phiSlice[:,:,::-1,:]
+        vdf_bundle['energy'] = energySlice[:,:,::-1,:]
 
         return vdf_bundle
+
+    def get_L3_monents_at_t(L3_data, tSliceIndex):
+        # making the dictionary
+        l3_data_bundle = {}
+
+        # extracting out the required L3 data
+        l3_data_bundle['MAGF_INST'] = L3_data['MAGF_INST'][tSliceIndex,:]
+        l3_data_bundle['VEL_INST'] = L3_data['VEL_INST'][tSliceIndex,:]
+        l3_data_bundle['DENS'] = L3_data['DENS'][tSliceIndex]
+
+        return l3_data_bundle
 
     def start_new_day(self, day_idx):
         self.tidx_start, self.tidx_end, self.VDF_dict = None, None, {}
@@ -83,6 +94,8 @@ class span:
         # clipping the VDF data in time for this day
         self.VDF_dict = self.get_VDFdict_at_day(fullday_dat)
 
+        # clipping the L3 spi data
+        self.L3_data_fullday = self.download_L3_data(self.day_arr[day_idx])
 
     def VDfile_directoryRemote(self, user_datetime):
         '''
@@ -119,3 +132,25 @@ class span:
         dat['EFLUX']  = dat_raw['EFLUX'].reshape((-1,8,32,8))
 
         return dat
+
+    def download_L3_data(self, user_datetime):
+        yyyy, mm, dd = user_datetime.year, user_datetime.month, user_datetime.day
+
+        trange = [f'{yyyy}-{mm}-{dd}/00:00:00', f'{yyyy}-{mm}-{dd}/23:59:59']
+        spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00_l3_mom', level='l3',
+                                    time_clip=True, get_support_data= True, varnames=['*'],
+                                    notplot=True, downloadonly=True)
+        dat = cdflib.CDF(spi_vars[0])
+
+        return dat
+
+    def get_L3_monents_at_t(self, tSliceIndex):
+        # making the dictionary
+        l3_data_bundle = {}
+
+        # extracting out the required L3 data
+        l3_data_bundle['MAGF_INST'] = self.L3_data_fullday['MAGF_INST'][tSliceIndex,:]
+        l3_data_bundle['VEL_INST'] = self.L3_data_fullday['VEL_INST'][tSliceIndex,:]
+        l3_data_bundle['DENS'] = self.L3_data_fullday['DENS'][tSliceIndex]
+
+        return l3_data_bundle
