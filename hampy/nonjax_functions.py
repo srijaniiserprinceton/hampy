@@ -2,6 +2,8 @@ from numpy import convolve as convolve1d
 from scipy.signal import savgol_filter, convolve2d
 import numpy as np
 
+NAX = np.newaxis
+
 def convolve1d_w_vdf(vdf_1d, kernel_1d):
     return convolve1d(vdf_1d, kernel_1d, mode='same')
 
@@ -139,4 +141,139 @@ class convolve_hammergap:
         self.gap_xvals_1D = self.gap_xvals_1D[1:]
         self.gap_yvals_1D = self.gap_yvals_1D[1:]
 
-    # def find_1d_gap()
+
+def get_st_line(p1, p2, x):
+    x1, y1 = p1
+    x2, y2 = p2
+
+    m = (y1-y2)/(x1-x2)
+    b = (x1*y2 - x2*y1)/(x1-x2)
+
+    return m * x + b
+
+def find_Eidx_band(convmat, log_vdf_2d, theta_idx, v_hamlets, ignorenans=None):
+    vx, vz = convmat.vx_plane_theta.T, convmat.vz_plane_theta.T
+    vel = np.sqrt(vx**2 + vz**2)
+    mask_hamlets = vel > v_hamlets
+
+    # extracting the specific theta index
+    vdf_sliced = log_vdf_2d[theta_idx]
+    mask_sliced = mask_hamlets[theta_idx]
+
+    # removing the nan entries below the mask_sliced region
+    mask_Eminval = np.where(mask_sliced)[0][0]
+    vdf_sliced[:mask_Eminval] = 1.0
+
+    # ignore nans if ignorenans is not None
+    if(ignorenans == None): pass
+    else: vdf_sliced[ignorenans] = 1.0
+
+    # checking for the lowest nan gap
+    idxmin, idxmax = np.where(np.diff(np.isnan(vdf_sliced).astype('int')))[0][:2]
+
+    # these are the indices which have nan
+    return idxmin+1, idxmax+1
+
+def generate_masks(log_vdf_2d, gap1, gap2):
+    # making masks for core, neck and hammerhead
+    coremask = np.zeros_like(log_vdf_2d, dtype='bool')
+    neckmask = np.zeros_like(log_vdf_2d, dtype='bool')
+    hammermask = np.zeros_like(log_vdf_2d, dtype='bool')
+
+    # making a 2D index grid
+    mgrid = np.mgrid[0:log_vdf_2d.shape[0], 0:log_vdf_2d.shape[1]]
+
+    # drawing the straight lines
+    coreedge_line = get_st_line((gap1[0], gap1[1]),
+                                (gap2[0], gap2[1]), 
+                                 mgrid[0][:,0])
+    hammeredge_line = get_st_line((gap1[0], gap1[2]),
+                                  (gap2[0], gap2[2]), 
+                                   mgrid[0][:,0])
+
+    # finding the mask below the core edge line and above the hammeredgeline
+    coremask[mgrid[1]+0.5 < coreedge_line[:,NAX]] = True
+    hammermask[mgrid[1]+0.5 > hammeredge_line[:,NAX]] = True
+
+    neckmask = ~(coremask + hammermask)
+
+    return coremask, neckmask, hammermask
+
+def find_masks(convmat, log_vdf_2d, v_hamlet):
+    # first throwing away the ones which fall below solar wind velocity
+    vx, vz = convmat.vx_plane_theta.T[convmat.gap_xvals, convmat.gap_yvals],\
+             convmat.vz_plane_theta.T[convmat.gap_xvals, convmat.gap_yvals]
+    
+    vel_gaps = np.sqrt(vx**2 + vz**2)
+
+    # finding if any of these are NOT hamlets
+    mask_hamlets = vel_gaps > v_hamlet
+
+    # only retaining the ones which are not hamlets (first filter)
+    gap_xlocs = convmat.gap_xvals[mask_hamlets]
+    gap_ylocs = convmat.gap_yvals[mask_hamlets]
+    orientation = convmat.orientation[mask_hamlets]
+    ngaps_arr = convmat.ngaps_arr[mask_hamlets]
+
+    # finding if any or the ngaps are 2 or more (second filter)
+    if(np.sum(ngaps_arr > 1) == 0): return None, None, None
+
+    # finding the theta index of the lowest 2-grid gap beyond v_sw
+    Emin_idx = np.argmin(gap_ylocs[ngaps_arr > 1])
+    theta_idx = gap_xlocs[ngaps_arr > 1][Emin_idx]
+    orientation_label = orientation[ngaps_arr > 1][Emin_idx]
+
+    # finding the cells in the theta_idx which correspond to 1 cell gap
+    ignorenan_Eidx = gap_ylocs[gap_xlocs == theta_idx][ngaps_arr[gap_xlocs == theta_idx] == 1]
+
+    # scanning this theta_idx to find the nan boundaries of the gap
+    gap1_Emin_idx, gap1_Emax_idx = find_Eidx_band(convmat, log_vdf_2d * 1.0, theta_idx, v_hamlet,
+                                                  ignorenans=ignorenan_Eidx)
+
+    Emin_idx_global = np.argmin(np.abs(gap_xlocs - gap_xlocs[ngaps_arr > 1][Emin_idx]))
+
+    # finding the theta index of the closest opposite side gap
+    oppositeside_mask = ~(orientation == orientation_label)
+    gap_ylocs_oppositeside = gap_ylocs[oppositeside_mask]
+    gap_xlocs_oppositeside = gap_xlocs[oppositeside_mask]
+
+    # idx_r = np.argmin(np.abs(gap_xlocs_oppositeside - gap_xlocs[Emin_idx_global]))
+    idx_r = np.argmin((gap_xlocs_oppositeside - gap_xlocs[Emin_idx_global])**2 +\
+                      (gap_ylocs_oppositeside - gap_ylocs[Emin_idx_global])**2)
+    global_idx_r = np.argmin(np.abs(gap_xlocs - gap_xlocs_oppositeside[idx_r]))
+    theta_idx_r = gap_xlocs[global_idx_r]
+
+    # scanning this theta_idx to find the nan boundaries of the gap
+    gap2_Emin_idx, gap2_Emax_idx = find_Eidx_band(convmat, log_vdf_2d * 1.0, theta_idx_r, v_hamlet)
+
+    # finding if the starting or the ending points of gap 2 are between the limits of the orginal gap
+    cond1 = gap1_Emin_idx <= gap2_Emin_idx <= gap1_Emax_idx
+    cond2 = gap1_Emin_idx <= gap2_Emax_idx <= gap1_Emax_idx
+
+    if(~(cond1 + cond2)): return None, None, None
+
+    coremask, neckmask, hammermask = generate_masks(log_vdf_2d,
+                                                    (theta_idx, gap1_Emin_idx, gap1_Emax_idx),
+                                                    (theta_idx_r, gap2_Emin_idx, gap2_Emax_idx))
+    
+    return coremask, neckmask, hammermask
+
+def hamslicer(convmat, log_vdf_2d, v_hamlet):
+    coremask, neckmask, hammermask = find_masks(convmat, log_vdf_2d, v_hamlet)
+
+    if(coremask is None): return None, None, None
+
+    # setting to badmasks nans for plotting
+    core = np.zeros_like(log_vdf_2d)
+    neck = np.zeros_like(log_vdf_2d)
+    hammer = np.zeros_like(log_vdf_2d)
+
+    core[coremask] = log_vdf_2d[coremask]
+    neck[neckmask] = log_vdf_2d[neckmask]
+    hammer[hammermask] = log_vdf_2d[hammermask]
+
+    core[~coremask] = np.nan
+    neck[~neckmask] = np.nan
+    hammer[~hammermask] = np.nan
+
+    return core, neck, hammer

@@ -87,6 +87,8 @@ def get_L3_monents_at_t(L3_data, tSliceIndex):
 
     # extracting out the required L3 data
     l3_data_bundle['MAGF_INST'] = L3_data['MAGF_INST'][tSliceIndex,:]
+    l3_data_bundle['VEL_INST'] = L3_data['VEL_INST'][tSliceIndex,:]
+    l3_data_bundle['DENS'] = L3_data['DENS'][tSliceIndex]
 
     return l3_data_bundle
 

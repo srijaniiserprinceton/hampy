@@ -10,6 +10,7 @@ from scipy.interpolate import griddata
 
 # custom script imports
 import get_span_data as get_data
+from hampy import nonjax_functions as f
 
 # global variables
 mass_p = 0.010438870      #proton mass in units eV/c^2 where c = 299792 km/s
@@ -32,12 +33,16 @@ def gen_log_df(df_theta):
     filter_mask += ~np.isnan(log_df_theta_padded[1:-1,2:])
 
     log_df_theta_new = log_df_theta * 1.0
-    log_df_theta_new[~filter_mask] = 0.0
+    log_df_theta_new[~filter_mask] = np.nan #0.0
 
     return log_df_theta_new 
 
 class convolve_hammergap:
-    def __init__(self, Ngap_max = 8):
+    def __init__(self, vx_plane_theta, vz_plane_theta, Ngap_max = 8):
+        # storing some basic information about the grid
+        self.vx_plane_theta = vx_plane_theta
+        self.vz_plane_theta = vz_plane_theta
+
         # initializing the different kinds of gap matrices (for convolution)
         self.Ngap_max = Ngap_max
         self.gap_mat_1D = None
@@ -49,17 +54,41 @@ class convolve_hammergap:
         self.gap_yvals_2D = None
         self.Ngaps_1D = None
         self.Ngaps_2D = None
+
+        # matrices to combine the 1D and 2D gap information
+        self.gap_xvals = None
+        self.gap_yvals = None
+        self.ngaps_arr = None
+        self.orientation = None
     
+    # def create_gap_matrices(self):
+    #     gap_mat_1D = {}
+    #     gap_mat_2D = {}
+        
+    #     for Ngap in range(1, self.Ngap_max):
+    #         gap_mat_1D[f'{Ngap}'] = np.zeros(Ngap+3) - 1
+    #         # gap_mat_1D[f'{Ngap}'][1:(1+Ngap)] = 1.0
+    #         gap_mat_1D[f'{Ngap}'][-(1+Ngap):-1] = 1.0
+
+    #         gap_mat_2D[f'{Ngap}'] = np.zeros((2, Ngap+3)) - 1
+    #         gap_mat_2D[f'{Ngap}'][0,-(1+Ngap):-1] = 1.0
+
+    #         # creating the reversed matrix
+    #         gap_mat_2D[f'{Ngap}_r'] = np.flip(gap_mat_2D[f'{Ngap}'], axis=0)
+
+    #     self.gap_mat_1D = gap_mat_1D
+    #     self.gap_mat_2D = gap_mat_2D
+
     def create_gap_matrices(self):
         gap_mat_1D = {}
         gap_mat_2D = {}
         
-        for Ngap in range(2, self.Ngap_max):
-            gap_mat_1D[f'{Ngap}'] = np.zeros(Ngap+3) - 1
+        for Ngap in range(1, self.Ngap_max):
+            gap_mat_1D[f'{Ngap}'] = np.zeros(Ngap+2) - 1
             # gap_mat_1D[f'{Ngap}'][1:(1+Ngap)] = 1.0
             gap_mat_1D[f'{Ngap}'][-(1+Ngap):-1] = 1.0
 
-            gap_mat_2D[f'{Ngap}'] = np.zeros((2, Ngap+3)) - 1
+            gap_mat_2D[f'{Ngap}'] = np.zeros((2, Ngap+2)) - 1
             gap_mat_2D[f'{Ngap}'][0,-(1+Ngap):-1] = 1.0
 
             # creating the reversed matrix
@@ -74,62 +103,112 @@ class convolve_hammergap:
         self.gap_yvals_2D = np.array([0])
         self.Ngaps_2D = 0
         self.orientation_2D = np.array(['x'])
-        self.ngaps_arr = np.array([0])
+        self.ngaps_arr_2D = np.array([0])
 
         log_VDF = np.nan_to_num(log_VDF * 1.0)
-        mask_vdf = log_VDF <= np.nanmin(log_VDF[log_VDF > 0])
+        mask_vdf = log_VDF < np.nanmin(log_VDF[log_VDF > 0])
 
-        for Ngap in range(2, self.Ngap_max):
-            hammermat = self.gap_mat_2D[f'{Ngap}']
+        for Ngap in range(1, self.Ngap_max):
+            hammermat = np.flip(self.gap_mat_2D[f'{Ngap}'], axis=1)
             convmat = convolve2d(mask_vdf, hammermat, mode='same')
             conv_maxval = np.max(convmat)
             if(conv_maxval == Ngap):
-                self.Ngaps_2D += 1
                 xarr, yarr = np.where(convmat == Ngap)
                 print(xarr[0], yarr[0], self.gap_xvals_2D)
-                self.gap_xvals_2D = np.append(self.gap_xvals_2D, xarr[0])
-                self.gap_yvals_2D = np.append(self.gap_yvals_2D, yarr[0])
-                self.orientation_2D = np.append(self.orientation_2D, 'n')
-                self.ngaps_arr = np.append(self.ngaps_arr, Ngap)
+                self.gap_xvals_2D = np.append(self.gap_xvals_2D, xarr)
+                self.gap_yvals_2D = np.append(self.gap_yvals_2D, yarr)
+                # self.gap_yvals_2D = np.append(self.gap_yvals_2D, yarr)
+                orientaion_arr = orientation_arr = np.array(['n' for _ in range(len(xarr))], dtype='str')
+                self.orientation_2D = np.append(self.orientation_2D, orientation_arr)
+                Ngap_arr = np.zeros(len(xarr)) + int(Ngap)
+                self.ngaps_arr_2D = np.append(self.ngaps_arr_2D, Ngap_arr)
+                self.Ngaps_2D += len(xarr)
 
-            hammermat = self.gap_mat_2D[f'{Ngap}_r']
+            hammermat = np.flip(self.gap_mat_2D[f'{Ngap}_r'], axis=1)
             convmat = convolve2d(mask_vdf, hammermat, mode='same')
             conv_maxval = np.max(convmat)
             if(conv_maxval == Ngap):
-                self.Ngaps_2D += 1
                 xarr, yarr = np.where(convmat == Ngap)
-                self.gap_xvals_2D = np.append(self.gap_xvals_2D, xarr[0]-1)
-                self.gap_yvals_2D = np.append(self.gap_yvals_2D, yarr[0])
-                self.orientation_2D = np.append(self.orientation_2D, 'r')
-                self.ngaps_arr = np.append(self.ngaps_arr, Ngap)
+                self.gap_xvals_2D = np.append(self.gap_xvals_2D, xarr-1)
+                # self.gap_yvals_2D = np.append(self.gap_yvals_2D, yarr-1)
+                self.gap_yvals_2D = np.append(self.gap_yvals_2D, yarr)
+                orientation_arr = np.array(['r' for _ in range(len(xarr))], dtype='str')
+                self.orientation_2D = np.append(self.orientation_2D, orientation_arr)
+                Ngap_arr = np.zeros(len(xarr)) + int(Ngap)
+                self.ngaps_arr_2D = np.append(self.ngaps_arr_2D, Ngap_arr)
+                self.Ngaps_2D += len(xarr)
 
-        self.gap_xvals_2D = self.gap_xvals_2D[1:]
-        self.gap_yvals_2D = self.gap_yvals_2D[1:]
+        print('2D locations:', self.gap_xvals_2D, self.gap_yvals_2D)
+
+        self.gap_xvals_2D = self.gap_xvals_2D[1:].astype('int')
+        self.gap_yvals_2D = self.gap_yvals_2D[1:].astype('int')
         self.orientation_2D = self.orientation_2D[1:]
-        self.ngaps_arr = self.ngaps_arr[1:]
+        self.ngaps_arr_2D = self.ngaps_arr_2D[1:].astype('int')
 
     def conv1d_w_VDF(self, log_VDF):
         # reinitializing for a new VDF analysis
         self.gap_xvals_1D = np.array([0])
         self.gap_yvals_1D = np.array([0])
         self.Ngaps_1D = 0
+        self.ngaps_arr_1D = np.array([0])
 
         log_VDF = np.nan_to_num(log_VDF * 1.0)
         mask_vdf = log_VDF <= np.nanmin(log_VDF[log_VDF > 0])
             
-        for Ngap in range(2, self.Ngap_max):
-            hammermat = self.gap_mat_1D[f'{Ngap}']
+        for Ngap in range(1, self.Ngap_max):
+            hammermat = np.flip(self.gap_mat_1D[f'{Ngap}'], axis=0)
             for angle_idx in range(mask_vdf.shape[0]):
                 convmat = np.convolve(mask_vdf[angle_idx], hammermat, mode='same')
                 conv_maxval = np.max(convmat)
                 if(conv_maxval == Ngap):
-                    self.Ngaps_1D += 1
                     xarr = np.where(convmat == Ngap)
-                    self.gap_xvals_1D = np.append(self.gap_xvals_1D, xarr[0])
+                    self.gap_xvals_1D = np.append(self.gap_xvals_1D, xarr[0])# - Ngap//2)
                     self.gap_yvals_1D = np.append(self.gap_yvals_1D, np.ones_like(xarr[0], dtype='int') * angle_idx)
+                    self.ngaps_arr_1D = np.append(self.ngaps_arr_1D, np.zeros_like(xarr[0]) + Ngap)
 
-        self.gap_xvals_1D = self.gap_xvals_1D[1:]
-        self.gap_yvals_1D = self.gap_yvals_1D[1:]
+                    self.Ngaps_1D += len(xarr[0])
+
+        self.gap_xvals_1D = self.gap_xvals_1D[1:].astype('int')
+        self.gap_yvals_1D = self.gap_yvals_1D[1:].astype('int')
+        self.ngaps_arr_1D = self.ngaps_arr_1D[1:].astype('int')
+
+    def merge_1D_2D(self, theta_idx_vsw):
+        # first we make an orientation array for the 1D cases
+        self.orientation_1D = np.array(['r' for _ in range(self.Ngaps_1D)], dtype='str')
+
+        # finding the indices which are reversed in orientation
+        mask_reverse = convmat.gap_yvals_1D > theta_idx_vsw
+
+        self.orientation_1D[mask_reverse] = 'n'
+
+        # now merging the arrays
+        orientation = np.append(self.orientation_1D, self.orientation_2D)
+        gap_xvals = np.append(self.gap_yvals_1D, self.gap_xvals_2D)
+        gap_yvals = np.append(self.gap_xvals_1D, self.gap_yvals_2D)
+        ngaps_arr = np.append(self.ngaps_arr_1D, self.ngaps_arr_2D)
+
+        # pruning the repeated coordinates
+        all_points = list(zip(gap_xvals, gap_yvals))
+        unique_pts, mask_unique = np.unique(np.asarray(all_points), axis=0, return_index=True)
+
+        # pruning the arrays based on the above mask
+        self.orientation = orientation[mask_unique]
+        self.gap_xvals = gap_xvals[mask_unique]
+        self.gap_yvals = gap_yvals[mask_unique]
+        self.ngaps_arr = ngaps_arr[mask_unique]
+
+        # # changing any of the indices that become -1 to 0 (will anyway be ignored)
+        # self.gap_xvals[self.gap_xvals < 0] = 0
+        # self.gap_yvals[self.gap_yvals < 0] = 0
+
+        # removing the ones which are exactly on the theta_idx_vsw line
+        purge_mask = self.gap_xvals == theta_idx_vsw
+
+        self.orientation = self.orientation[~purge_mask]
+        self.gap_xvals = self.gap_xvals[~purge_mask]
+        self.gap_yvals = self.gap_yvals[~purge_mask]
+        self.ngaps_arr = self.ngaps_arr[~purge_mask]
+
 
 def softham_finder(hammerline, intdip_threshold=0.5):
     hammerline_sm = savgol_filter(hammerline, 7, 5)
@@ -157,70 +236,14 @@ def softham_finder(hammerline, intdip_threshold=0.5):
     return hammerline_sm, np.sum(np.diff(hammerline_sm[maxval_idx:minval_idx])>0)>0, peak_idx + maxval_idx,\
            edgecase_hammer, secondminval_idx
 
-def get_st_line(p1, p2, x):
-    x1, y1 = p1
-    x2, y2 = p2
-
-    m = (y1-y2)/(x1-x2)
-    b = (x1*y2 - x2*y1)/(x1-x2)
-
-    return m * x + b
-
-def hamslicer(vdf_2d, gap_ylocs, gap_xlocs, orientation, ngaps_arr):
-    uppergap_xlocs, uppergap_ylocs = gap_xlocs[orientation=='n'], gap_ylocs[orientation=='n']
-    lowergap_xlocs, lowergap_ylocs = gap_xlocs[orientation=='r'], gap_ylocs[orientation=='r']
-
-    upper_ngaps, lower_ngaps = ngaps_arr[orientation=='n'], ngaps_arr[orientation=='r']
-
-    upperlimx_core, upperlimy_core = np.max(uppergap_xlocs), uppergap_ylocs[np.argmax(uppergap_xlocs)]
-    lowerlimx_core, lowerlimy_core = np.max(lowergap_xlocs), lowergap_ylocs[np.argmax(lowergap_xlocs)]
-
-    upperlimx_hammer, upperlimy_hammer = upperlimx_core + upper_ngaps[np.argmax(uppergap_xlocs)], upperlimy_core
-    lowerlimx_hammer, lowerlimy_hammer = lowerlimx_core + lower_ngaps[np.argmax(lowergap_xlocs)], lowerlimy_core
-
-    # making masks for core, neck and hammerhead
-    coremask = np.ones_like(vdf_2d, dtype='bool')
-    neckmask = np.ones_like(vdf_2d, dtype='bool')
-    hammermask = np.ones_like(vdf_2d, dtype='bool')
-
-    # making a 2D index grid
-    mgrid = np.mgrid[0:vdf_2d.shape[0], 0:vdf_2d.shape[1]]
-
-    # making the straight lines to connect (upperlimx_core, upperlimy_core) to (lowerlimx_core, lowerlimy_core)
-    # and (upperlimx_hammer, upperlimy_hammer) to (lowerlimx_hammer, lowerlimy_hammer)
-    coreedge_line = get_st_line((upperlimy_core, upperlimx_core-2),
-                                (lowerlimy_core, lowerlimx_core-2), 
-                                 mgrid[0][:,0])
-    hammeredge_line = get_st_line((upperlimy_hammer, upperlimx_hammer-2),
-                                  (lowerlimy_hammer, lowerlimx_hammer-2), 
-                                   mgrid[0][:,0])
-
-    # finding the mask below the core edge line and above the hammeredgeline
-    coremask[mgrid[1] > coreedge_line[:,NAX]] = False
-    hammermask[mgrid[1] < hammeredge_line[:,NAX]] = False
-
-    coremask[upperlimy_core:, :upperlimx_core] = True
-    coremask[:lowerlimy_core, lowerlimx_core:] = False
-
-    hammermask[upperlimy_hammer:, :upperlimx_hammer-1] = False
-    hammermask[:lowerlimy_hammer, lowerlimx_hammer:] = True
-
-    # filling in the neck mask
-    neckmask = ~(coremask + hammermask)
-
-    return coremask, neckmask, hammermask
-
 if __name__=='__main__':
     # user defined date and time
-    year, month, date = 2020, 1, 29
+    year, month, date = 2020, 1, 31
     hour, minute, second = 18, 10, 1
 
     # timestamp for Verniero et al 2022 hammerhead
     # year, month, date = 2020, 1, 29
     # hour, minute, second = 18, 10, 1
-
-    # creating the 1D and 2D convolution matrices once for the entire runtime
-    convmat = convolve_hammergap()
 
     # converting to datetime format to extract time index
     user_datetime = datetime(year, month, date)
@@ -228,14 +251,26 @@ if __name__=='__main__':
 
     # loading the data (downloading the file if necessary)
     cdf_VDfile = get_data.download_VDF_file(user_datetime)
+    # getting the spi_vars 
+    l3_data = get_data.download_L3_data(user_datetime)
 
     # convert time
     epoch = cdflib.cdfepoch.to_datetime(cdf_VDfile['EPOCH'])
     # find index for desired timeslice
-    tSliceIndex  = bisect.bisect_left(epoch, timeSlice)
+    tSliceIndex  = 9775 #bisect.bisect_left(epoch, timeSlice) # check 9325, 9309
     
     # getting the VDF dictionary at the desired timestamp
-    vdf_dict = get_data.get_VDFdict_at_t(cdf_VDfile, tSliceIndex)   # check 9328
+    vdf_dict = get_data.get_VDFdict_at_t(cdf_VDfile, tSliceIndex)
+
+    # convert time
+    epoch = cdflib.cdfepoch.to_datetime(l3_data['EPOCH'])
+    # find index for desired timeslice
+    tSliceIndex  = 9775 #bisect.bisect_left(epoch, timeSlice)
+    # getting the required l3 data dictionary
+    l3_data_dict = get_data.get_L3_monents_at_t(l3_data, tSliceIndex)
+
+    # updating the vdf_dict with the required L3 data
+    vdf_dict.update(l3_data_dict)
 
     # creating the first snapshot of the interactive figure
     fig, ax = plt.subplots(1, 3, figsize=(15,10))
@@ -288,8 +323,44 @@ if __name__=='__main__':
     vy_plane_theta = vel_plane * np.sin(np.radians(phi_plane)) * np.cos(np.radians(theta_plane))
     vz_plane_theta = vel_plane *                                 np.sin(np.radians(theta_plane))
 
-    im0 = ax[0].contourf(vx_plane_theta, vz_plane_theta, np.log10(df_theta),
-                           cmap=cmap, rasterized='True', vmin=vmin, vmax=vmax)
+    # converting the VDF as a function of energy and theta to log space
+    log_df_theta_span = gen_log_df(df_theta).T
+
+    # # getting the core, neck and hammer component
+    # convmat.conv2d_w_VDF(log_df_theta_span)
+    # core, neck, hammer = hamslicer(log_df_theta_span)
+
+    # getting the solar wind velocity in the instrument frame
+    vel_sc = np.linalg.norm(l3_data_dict['VEL_INST'])
+
+    # calculating the alfven velocity
+    Bmag = np.linalg.norm(l3_data_dict['MAGF_INST'])
+    dens = l3_data_dict['DENS']
+    valfven = 21.8 * Bmag / np.sqrt(dens)
+    
+    vel_hamlet = vel_sc + 1.0 * valfven
+
+    # creating the 1D and 2D convolution matrices once for the entire runtime
+    convmat = convolve_hammergap(vx_plane_theta, vz_plane_theta)
+    convmat.conv1d_w_VDF(log_df_theta_span)
+    convmat.conv2d_w_VDF(log_df_theta_span)
+    convmat.merge_1D_2D(np.where(log_df_theta_span == np.nanmax(log_df_theta_span))[0][0])
+
+    # setting up denser theta array for plotting the solar wind vel circle 
+    theta_sw_vel = np.linspace(0, 2 * np.pi, 100)
+    sw_x, sw_y = vel_hamlet * np.cos(theta_sw_vel), vel_hamlet * np.sin(theta_sw_vel)
+
+    im0 = ax[0].pcolormesh(vx_plane_theta, vz_plane_theta, np.log10(df_theta),
+                        cmap=cmap, rasterized='True', vmin=vmin, vmax=vmax)
+    ax[0].plot(sw_x, sw_y, '--w')
+
+    # im0_c = ax[0].contourf(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(core),
+    #                        cmap='Reds', rasterized='True', vmin=vmin, vmax=vmax)
+    # im0_n = ax[0].contourf(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(neck),
+    #                        cmap='hot', rasterized='True', vmin=vmin, vmax=vmax)
+    # im0_h = ax[0].contourf(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(hammer),
+    #                        cmap='bone', rasterized='True', vmin=vmin, vmax=vmax)
+    
 
     ax[0].set_xlim(-1000,0)
     ax[0].set_ylim(-500,500)
@@ -298,16 +369,13 @@ if __name__=='__main__':
     ax[0].set_title('VDF SPAN-I $\\theta$-plane')
     ax[0].set_aspect('equal')
 
-    # converting the VDF as a function of energy and theta to log space
-    log_df_theta = gen_log_df(df_theta)
-
     # velocity grid for interpolation
     v = np.linspace(200, 1000, 31)
     t = np.linspace(-45, 55, 30)
     vv, tt = np.meshgrid(v, t, indexing='ij')
 
     # interpolating the log df for better resolution of the expected dip of hammerhead
-    log_df_theta_interp = griddata((vel_plane.flatten(), theta_plane.flatten()), log_df_theta.flatten(), (vv,tt))
+    log_df_theta_interp = griddata((vel_plane.flatten(), theta_plane.flatten()), log_df_theta_span.T.flatten(), (vv,tt))
     log_df_theta = np.nan_to_num(log_df_theta_interp)
 
     im2 =  ax[2].pcolormesh(vv, tt, log_df_theta, cmap='binary_r')
@@ -341,26 +409,40 @@ if __name__=='__main__':
     # Define an axes area and draw a slider in it
     axis_color = 'white'
     time_slider_ax  = fig.add_axes([0.4, 0.12, 0.2, 0.03], facecolor=axis_color)
-    time_slider = Slider(time_slider_ax, r'$\mu_{\phi}$', tSliceIndex-500, tSliceIndex+500, valinit=tSliceIndex)
+    time_slider = Slider(time_slider_ax, r'$\mu_{\phi}$', 0, len(epoch), valinit=tSliceIndex)
 
     # Define an action for modifying the line when any slider's value changes
     def sliders_on_changed(val):
         # getting the new VDF dictionary for the new time
         vdf_dict = get_data.get_VDFdict_at_t(cdf_VDfile, int(time_slider.val))
+        l3_data_dict = get_data.get_L3_monents_at_t(l3_data, int(time_slider.val)) 
+        vel_sc = np.linalg.norm(l3_data_dict['VEL_INST'])    
+        Bmag = np.linalg.norm(l3_data_dict['MAGF_INST'])
+        dens = l3_data_dict['DENS']
+        valfven = 21.8 * Bmag / np.sqrt(dens)
+
+        vel_hamlet = vel_sc + 1.0 * valfven
+
+        sw_x, sw_y = vel_hamlet * np.cos(theta_sw_vel), vel_hamlet * np.sin(theta_sw_vel)  
 
         # clearing out the previous subplots
         ax[0].clear()
         ax[1].clear()
 
         df_theta = np.nansum(vdf_dict['vdf'], axis=0)
-        ax[0].contourf(vx_plane_theta, vz_plane_theta, np.log10(df_theta),
-                           cmap=cmap, rasterized='True', vmin=vmin, vmax=vmax)
+        log_df_theta = gen_log_df(df_theta)
+        # interpolating the log_df_theta
+        log_df_theta_span = log_df_theta.T * 1.0   # creating a copy of the true SPAN data for convolution tests
+        ax[0].pcolormesh(vx_plane_theta.T, vz_plane_theta.T, log_df_theta_span,
+                       cmap=cmap, rasterized='True', vmin=vmin, vmax=vmax)
+        ax[0].plot(sw_x, sw_y, '--w')
         ax[0].set_xlim(-1000,0)
         ax[0].set_ylim(-500,500)
         ax[0].set_aspect('equal')
         ax[0].set_xlabel('$v_x$ km/s')
         ax[0].set_ylabel('$v_z$ km/s')
         ax[0].set_title('VDF SPAN-I $\\theta$-plane')
+        ax[0].plot(sw_x, sw_y, '--w')
 
         df_phi = np.nansum(vdf_dict['vdf'], axis=2)
         ax[1].contourf(np.transpose(vx_plane_phi), np.transpose(vy_plane_phi), np.log10(np.transpose(df_phi)),
@@ -372,9 +454,6 @@ if __name__=='__main__':
         ax[1].set_ylabel('$v_y$ km/s')
         ax[1].set_title('VDF SPAN-I $\\phi$-plane')
 
-        log_df_theta = gen_log_df(df_theta)
-        # interpolating the log_df_theta
-        log_df_theta_span = log_df_theta.T * 1.0   # creating a copy of the true SPAN data for convolution tests
         log_df_theta_interp = griddata((vel_plane.flatten(), theta_plane.flatten()), log_df_theta.flatten(), (vv,tt))
         log_df_theta = np.nan_to_num(log_df_theta_interp)
         im2.set_array(log_df_theta)
@@ -394,14 +473,61 @@ if __name__=='__main__':
             # conducting 1D and 2D convolution tests to detect hammerhead-like necks in VDF
             convmat.conv1d_w_VDF(log_df_theta_span)
             convmat.conv2d_w_VDF(log_df_theta_span)
+            convmat.merge_1D_2D(np.where(log_df_theta_span == np.nanmax(log_df_theta_span))[0][0])
 
             # using different markers for 1D and 2D convolution test passes
             if(convmat.Ngaps_1D > 0):
+                ax[0].cla()
+                ax[0].pcolormesh(vx_plane_theta.T, vz_plane_theta.T, log_df_theta_span,
+                            cmap=cmap, rasterized='True', vmin=vmin, vmax=vmax)
+                ax[0].plot(sw_x, sw_y, '--w')
+                ax[0].set_xlim(-1000,0)
+                ax[0].set_ylim(-500,500)
+                ax[0].set_aspect('equal')
+                ax[0].set_xlabel('$v_x$ km/s')
+                ax[0].set_ylabel('$v_z$ km/s')
+                ax[0].set_title('VDF SPAN-I $\\theta$-plane')
+                ax[0].plot(sw_x, sw_y, '--w')
                 ax[0].scatter(vx_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D],
                               vz_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D], marker='o', color='red')
             if(convmat.Ngaps_2D > 0):
-                ax[0].scatter(vx_plane_theta[convmat.gap_yvals_2D, convmat.gap_xvals_2D],
-                              vz_plane_theta[convmat.gap_yvals_2D, convmat.gap_xvals_2D], marker='x', color='yellow')
+                ax[0].cla()
+                try:
+                    core, neck, hammer = f.hamslicer(convmat, log_df_theta_span, vel_hamlet)
+                    ax[0].pcolormesh(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(core),
+                                cmap='Reds', rasterized='True', vmin=vmin, vmax=vmax)
+                    ax[0].pcolormesh(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(neck),
+                                cmap='bone', rasterized='True', vmin=vmin, vmax=vmax)
+                    ax[0].pcolormesh(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(hammer),
+                                cmap='hot', rasterized='True', vmin=vmin, vmax=vmax)
+                    ax[0].scatter(vx_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D],
+                                vz_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D], marker='o', color='red')
+                    ax[0].scatter(vx_plane_theta[convmat.gap_yvals_2D, convmat.gap_xvals_2D],
+                                vz_plane_theta[convmat.gap_yvals_2D, convmat.gap_xvals_2D], marker='x', color='yellow')
+                    ax[0].plot(sw_x, sw_y, '--w')
+                    ax[0].set_xlim(-1000,0)
+                    ax[0].set_ylim(-500,500)
+                    ax[0].set_aspect('equal')
+                    ax[0].set_xlabel('$v_x$ km/s')
+                    ax[0].set_ylabel('$v_z$ km/s')
+                    ax[0].set_title('VDF SPAN-I $\\theta$-plane')
+                
+                except:
+                    ax[0].pcolormesh(vx_plane_theta.T, vz_plane_theta.T, log_df_theta_span,
+                                cmap=cmap, rasterized='True', vmin=vmin, vmax=vmax)
+                    ax[0].plot(sw_x, sw_y, '--w')
+                    ax[0].set_xlim(-1000,0)
+                    ax[0].set_ylim(-500,500)
+                    ax[0].set_aspect('equal')
+                    ax[0].set_xlabel('$v_x$ km/s')
+                    ax[0].set_ylabel('$v_z$ km/s')
+                    ax[0].set_title('VDF SPAN-I $\\theta$-plane')
+                    ax[0].scatter(vx_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D],   
+                              vz_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D], marker='o', color='red')
+                    ax[0].scatter(vx_plane_theta[convmat.gap_yvals_2D, convmat.gap_xvals_2D],
+                                  vz_plane_theta[convmat.gap_yvals_2D, convmat.gap_xvals_2D], marker='x', color='yellow')
+                    ax[0].plot(sw_x, sw_y, '--w')
+
                 ax[2].set_title(f'Soft-Ham = True, Hard-Ham = True')
             if(convmat.Ngaps_1D == 0 and convmat.Ngaps_2D == 0):
                 ax[2].set_title(f'Soft-Ham = True, Hard-Ham = False')
