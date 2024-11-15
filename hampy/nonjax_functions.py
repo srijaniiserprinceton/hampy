@@ -307,6 +307,7 @@ def find_masks(convmat, log_vdf_2d, v_hamlet):
                       (gap_ylocs_oppositeside - gap_ylocs[Emin_idx_global])**2)
     global_idx_r = np.argmin(np.abs(gap_xlocs - gap_xlocs_oppositeside[idx_r]))
     theta_idx_r = gap_xlocs[global_idx_r]
+    ngaps_r = ngaps_arr[global_idx_r]
 
     # scanning this theta_idx to find the nan boundaries of the gap
     gap2_Emin_idx, gap2_Emax_idx = find_Eidx_band(convmat, log_vdf_2d * 1.0, theta_idx_r, v_hamlet)
@@ -315,16 +316,19 @@ def find_masks(convmat, log_vdf_2d, v_hamlet):
     cond1 = gap1_Emin_idx <= gap2_Emin_idx <= gap1_Emax_idx
     cond2 = gap1_Emin_idx <= gap2_Emax_idx <= gap1_Emax_idx
 
-    if(~(cond1 + cond2)): return None, None, None
+    if(~(cond1 + cond2)): return None, None, None, None
 
     coremask, neckmask, hammermask = generate_masks(log_vdf_2d,
                                                     (theta_idx, gap1_Emin_idx, gap1_Emax_idx),
                                                     (theta_idx_r, gap2_Emin_idx, gap2_Emax_idx))
     
-    return coremask, neckmask, hammermask
+    if(ngaps_r < 2): og_flag = False
+    else: og_flag = True
+    
+    return coremask, neckmask, hammermask, og_flag
 
 def hamslicer(convmat, log_vdf_2d, v_hamlet):
-    coremask, neckmask, hammermask = find_masks(convmat, log_vdf_2d, v_hamlet)
+    coremask, neckmask, hammermask, og_flag = find_masks(convmat, log_vdf_2d, v_hamlet)
 
     if(coremask is None): return None, None, None
 
@@ -341,4 +345,4 @@ def hamslicer(convmat, log_vdf_2d, v_hamlet):
     neck[~neckmask] = np.nan
     hammer[~hammermask] = np.nan
 
-    return core, neck, hammer
+    return core, neck, hammer, og_flag

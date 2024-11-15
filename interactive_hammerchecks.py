@@ -496,7 +496,7 @@ if __name__=='__main__':
             if(convmat.Ngaps_2D > 0):
                 ax[0].cla()
                 try:
-                    core, neck, hammer = f.hamslicer(convmat, log_df_theta_span, vel_hamlet)
+                    core, neck, hammer, og_flag = f.hamslicer(convmat, log_df_theta_span, vel_hamlet)
                     ax[0].pcolormesh(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(core),
                                 cmap='Reds', rasterized='True', vmin=vmin, vmax=vmax)
                     ax[0].pcolormesh(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(neck),
