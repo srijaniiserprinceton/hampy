@@ -18,9 +18,8 @@ class hammer_moments:
         self.vxx = self.vx * self.vx
         self.vxy = self.vx * self.vy
         self.vxz = self.vx * self.vz
-        self.vyx = self.vy * self.vx
         self.vyy = self.vy * self.vy
-        self.vyz = self.vz * self.vz
+        self.vyz = self.vy * self.vz
         self.vzz = self.vz * self.vz
     
     def get_vdf_moments(self, mask, vdf_3d):

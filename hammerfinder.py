@@ -22,8 +22,8 @@ def read_pickle(fname):
 
 if __name__=='__main__':
     # used defined start and end times in YYYY-MM-DD/hh:mm:ss format
-    tstart = '2020-02-2/18:00:00'
-    tend   = '2020-02-3/18:20:00'
+    tstart = '2020-01-26/00:00:00'
+    tend   = '2020-01-27/23:59:59'
 
     # setting up the data loading process [processing will happen one day at a time]
     span_data = load_data.span(tstart, tend)
@@ -135,7 +135,7 @@ if __name__=='__main__':
                         coremask, neckmask, hammermask, og_flag = f.find_masks(convmat, log_df_theta_span, vel_hamlet)
                         core, neck, hammer, og_flag = f.hamslicer(convmat, log_df_theta_span, vel_hamlet)
                     except:
-                        coremask, neckmask, hammermask = None, None, None
+                        coremask, neckmask, hammermask, og_flag = None, None, None, False
 
                     if(coremask is None): pass
                     else:
@@ -148,36 +148,38 @@ if __name__=='__main__':
                                                                           span_data.VDF_dict['vdf'][time_idx]*1.0)
                         day_filter_dict[hammer_epoch]['og_flag'] = og_flag
 
+                        # sys.exit()
+
                         if(og_flag == True):
                             hamcounter += 1
                             print(f'# OG Hammerhead detected: {hamcounter}')
 
-                        # plotting and saving
-                        fig, ax = plt.subplots(1,1)
-                        vmin, vmax = -1, 8
-                        sw_x, sw_y = vel_hamlet * np.cos(theta_sw_vel), vel_hamlet * np.sin(theta_sw_vel)  
+                            # plotting and saving
+                            fig, ax = plt.subplots(1,1)
+                            vmin, vmax = -1, 8
+                            sw_x, sw_y = vel_hamlet * np.cos(theta_sw_vel), vel_hamlet * np.sin(theta_sw_vel)  
 
-                        ax.pcolormesh(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(core),
-                            cmap='Reds', rasterized='True', vmin=vmin, vmax=vmax)
-                        ax.pcolormesh(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(neck),
-                                    cmap='bone', rasterized='True', vmin=vmin, vmax=vmax)
-                        ax.pcolormesh(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(hammer),
-                                    cmap='hot', rasterized='True', vmin=vmin, vmax=vmax)
-                        ax.scatter(vx_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D],
-                                    vz_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D], marker='o', color='red')
-                        ax.scatter(vx_plane_theta[convmat.gap_yvals_2D, convmat.gap_xvals_2D],
-                                    vz_plane_theta[convmat.gap_yvals_2D, convmat.gap_xvals_2D], marker='x', color='yellow')
-                        ax.plot(sw_x, sw_y, '--w')
-                        ax.set_xlim(-1000,0)
-                        ax.set_ylim(-500,500)
-                        ax.set_aspect('equal')
-                        ax.set_xlabel('$v_x$ km/s')
-                        ax.set_ylabel('$v_z$ km/s')
-                        ax.set_title(f'VDF SPAN-I $\\theta$-plane | OG Flag = {og_flag}')
+                            ax.contourf(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(core),
+                                cmap='Reds', rasterized='True', vmin=vmin, vmax=vmax)
+                            ax.contourf(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(neck),
+                                        cmap='bone', rasterized='True', vmin=vmin, vmax=vmax)
+                            ax.contourf(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(hammer),
+                                        cmap='hot', rasterized='True', vmin=vmin, vmax=vmax)
+                            ax.scatter(vx_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D],
+                                        vz_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D], marker='o', color='red')
+                            ax.scatter(vx_plane_theta[convmat.gap_yvals_2D, convmat.gap_xvals_2D],
+                                        vz_plane_theta[convmat.gap_yvals_2D, convmat.gap_xvals_2D], marker='x', color='yellow')
+                            ax.plot(sw_x, sw_y, '--w')
+                            ax.set_xlim(-1000,0)
+                            ax.set_ylim(-500,500)
+                            ax.set_aspect('equal')
+                            ax.set_xlabel('$v_x$ km/s')
+                            ax.set_ylabel('$v_z$ km/s')
+                            ax.set_title(f'VDF SPAN-I $\\theta$-plane | OG Flag = {og_flag}')
 
-                        plt.savefig(f'HammerFigs/day_{day_idx}_time_{time_idx}.png')
-                        plt.close()
-                        
+                            plt.savefig(f'HammerFigs/day_{day_idx}_time_{time_idx}.png')
+                            plt.close()
+                            
                         
 
                 if(convmat.Ngaps_1D == 0 and convmat.Ngaps_2D == 0):

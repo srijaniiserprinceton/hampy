@@ -353,7 +353,7 @@ if __name__=='__main__':
     theta_sw_vel = np.linspace(0, 2 * np.pi, 100)
     sw_x, sw_y = vel_hamlet * np.cos(theta_sw_vel), vel_hamlet * np.sin(theta_sw_vel)
 
-    im0 = ax[0].pcolormesh(vx_plane_theta, vz_plane_theta, np.log10(df_theta),
+    im0 = ax[0].contourf(vx_plane_theta, vz_plane_theta, np.log10(df_theta),
                         cmap=cmap, rasterized='True', vmin=vmin, vmax=vmax)
     ax[0].plot(sw_x, sw_y, '--w')
 
@@ -436,7 +436,7 @@ if __name__=='__main__':
         log_df_theta = f.gen_log_df(df_theta)
         # interpolating the log_df_theta
         log_df_theta_span = log_df_theta.T * 1.0   # creating a copy of the true SPAN data for convolution tests
-        ax[0].pcolormesh(vx_plane_theta.T, vz_plane_theta.T, log_df_theta_span,
+        ax[0].contourf(vx_plane_theta.T, vz_plane_theta.T, log_df_theta_span,
                        cmap=cmap, rasterized='True', vmin=vmin, vmax=vmax)
         ax[0].plot(sw_x, sw_y, '--w')
         ax[0].set_xlim(-1000,0)
@@ -497,11 +497,11 @@ if __name__=='__main__':
                 ax[0].cla()
                 try:
                     core, neck, hammer, og_flag = f.hamslicer(convmat, log_df_theta_span, vel_hamlet)
-                    ax[0].pcolormesh(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(core),
+                    ax[0].contourf(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(core),
                                 cmap='Reds', rasterized='True', vmin=vmin, vmax=vmax)
-                    ax[0].pcolormesh(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(neck),
+                    ax[0].contourf(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(neck),
                                 cmap='bone', rasterized='True', vmin=vmin, vmax=vmax)
-                    ax[0].pcolormesh(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(hammer),
+                    ax[0].contourf(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(hammer),
                                 cmap='hot', rasterized='True', vmin=vmin, vmax=vmax)
                     ax[0].scatter(vx_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D],
                                 vz_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D], marker='o', color='red')
@@ -516,7 +516,7 @@ if __name__=='__main__':
                     ax[0].set_title(f'{str(epoch[int(time_slider.val)])}')
                 
                 except:
-                    ax[0].pcolormesh(vx_plane_theta.T, vz_plane_theta.T, log_df_theta_span,
+                    ax[0].contourf(vx_plane_theta.T, vz_plane_theta.T, log_df_theta_span,
                                 cmap=cmap, rasterized='True', vmin=vmin, vmax=vmax)
                     ax[0].plot(sw_x, sw_y, '--w')
                     ax[0].set_xlim(-1000,0)
