@@ -241,7 +241,7 @@ def softham_finder(hammerline, intdip_threshold=0.5):
 
 if __name__=='__main__':
     # user defined date and time
-    year, month, date = 2020, 1, 29
+    year, month, date = 2020, 1, 31
     hour, minute, second = 18, 10, 1
 
     # timestamp for Verniero et al 2022 hammerhead

@@ -7,6 +7,7 @@ import cdflib, re, pickle
 from hampy import load_data
 from hampy import nonjax_functions as f
 from hampy import comp_moments
+from hampy.plotter import plot_tools 
 
 mass_p = 0.010438870      #proton mass in units eV/c^2 where c = 299792 km/s
 charge_p = 1              #proton charge in units eV
@@ -22,8 +23,8 @@ def read_pickle(fname):
 
 if __name__=='__main__':
     # used defined start and end times in YYYY-MM-DD/hh:mm:ss format
-    tstart = '2020-01-26/00:00:00'
-    tend   = '2020-01-27/23:59:59'
+    tstart = '2020-02-01/00:00:00'
+    tend   = '2020-02-01/23:59:59'
 
     # setting up the data loading process [processing will happen one day at a time]
     span_data = load_data.span(tstart, tend)
@@ -32,6 +33,9 @@ if __name__=='__main__':
     v = np.linspace(200, 1000, 31)
     t = np.linspace(-55, 55, 30)
     vv, tt = np.meshgrid(v, t, indexing='ij')
+
+    # dictionary for this day (to be stored as a .pkl file for each day's filtering)
+    global_day_filter_dict = {}
 
     for day_idx in range(span_data.Ndays):
         print(f'Starting analysis of Day {span_data.day_arr[day_idx]}.')
@@ -154,6 +158,7 @@ if __name__=='__main__':
                             hamcounter += 1
                             print(f'# OG Hammerhead detected: {hamcounter}')
 
+                            '''
                             # plotting and saving
                             fig, ax = plt.subplots(1,1)
                             vmin, vmax = -1, 8
@@ -179,6 +184,7 @@ if __name__=='__main__':
 
                             plt.savefig(f'HammerFigs/day_{day_idx}_time_{time_idx}.png')
                             plt.close()
+                            '''
                             
                         
 
@@ -188,5 +194,9 @@ if __name__=='__main__':
         # writing the pkl file
         date_str = re.split('[ ]', str(epoch[0]))[0]
         write_pickle(day_filter_dict, f'hamstring_{date_str}')
+
+        # plot_tools.plot_temperature_anisotropy(day_filter_dict, span_data, day_idx)
+        # plot_tools.compare_density(day_filter_dict, span_data, day_idx)
+        plot_tools.plot_Tani_2d_hist(day_filter_dict, span_data, day_idx)
 
 
