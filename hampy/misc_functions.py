@@ -1,4 +1,5 @@
 import numpy as np
+import cdflib
 
 def convert_to_tensor(input_array):
     N_time = input_array.shape[0]
@@ -46,7 +47,7 @@ def rotate_the_magnetic_field_vector(t_tensor, rot):
 
     return(T_rot)
 
-def find_Tanisotropy(T_tensor, B, Bepoch, hammerepoch):
+def find_Tanisotropy(T_tensor, B, spi_epoch, hammerepoch):
     T_XX,T_YY,T_ZZ,T_XY,T_XZ,T_YZ = np.asarray(T_tensor).T
 
     #Access tensor elements -- The temperature is an array of 9 elements. We want to find out how much temp is aligned parallel or perp to the mag field.
@@ -67,7 +68,7 @@ def find_Tanisotropy(T_tensor, B, Bepoch, hammerepoch):
     Anisotropy=[]
 
     for hamepoch_idx in range(len(T_XX)):  #Calculates Tperp and Tpar from the projection of the magnetic field vector
-        i = np.argmin(np.abs(Bepoch - hammerepoch[hamepoch_idx]))
+        i = np.argmin(np.abs(spi_epoch - hammerepoch[hamepoch_idx]))
         Sum_1=B_X[i]*B_X[i]*T_XX[hamepoch_idx]
         Sum_2=B_X[i]*B_Y[i]*T_XY[hamepoch_idx]
         Sum_3=B_X[i]*B_Z[i]*T_XZ[hamepoch_idx]
@@ -85,3 +86,115 @@ def find_Tanisotropy(T_tensor, B, Bepoch, hammerepoch):
         Anisotropy.append(T_perp/T_para)
 
     return np.asarray(T_perp), np.asarray(T_parallel), np.asarray(Anisotropy)
+
+
+def extract_params(hammerdict, span_data, og_only=True):
+    # to store density moments
+    core_density = []
+    neck_density = []
+    hammer_density = []
+    total_hampy_density = []
+    span_density = []
+
+    # velocity moments
+    U = {}
+
+    # finding the times in UTC
+    epoch_arr = np.asarray(list(hammerdict.keys()))
+    dt_arr = []
+
+    # to store drift velocity
+    neck_vdrift = []
+    hammer_vdrift = []
+
+    # FIELDS measured magnetic field for computing Valfven later
+    span_Bmag = []
+
+    # to store the different temperature tensors for the different components of the VDF
+    T_tensor = {}
+
+    components = ['core', 'neck', 'hammer']
+
+    # finding the magnetic fields for rotating the temperature tensor
+    B_vec_inst = []
+
+    for component in components:
+        U[f'{component}'] = {}
+        U[f'{component}']['Ux'] = []
+        U[f'{component}']['Uy'] = []
+        U[f'{component}']['Uz'] = []
+        T_tensor[f'{component}'] = []
+
+    for epoch_idx, epoch in enumerate(hammerdict.keys()):
+        try:
+            if(og_only):
+                if(not hammerdict[epoch]['og_flag']): continue
+
+            for component in components:
+                # exctracting the velocities 
+                U[f'{component}']['Ux'].append(hammerdict[epoch][f'{component}_moments']['Ux'])
+                U[f'{component}']['Uy'].append(hammerdict[epoch][f'{component}_moments']['Uy'])
+                U[f'{component}']['Uz'].append(hammerdict[epoch][f'{component}_moments']['Uz'])
+
+                # extracting temperatures
+                Txx = hammerdict[epoch][f'{component}_moments']['Txx']
+                Txy = hammerdict[epoch][f'{component}_moments']['Txy']
+                Txz = hammerdict[epoch][f'{component}_moments']['Txz']
+                Tyy = hammerdict[epoch][f'{component}_moments']['Tyy']
+                Tyz = hammerdict[epoch][f'{component}_moments']['Tyz']
+                Tzz = hammerdict[epoch][f'{component}_moments']['Tzz']
+
+                T_tensor[f'{component}'].append((np.asarray([Txx, Tyy, Tzz, Txy, Txz, Tyz])))                
+
+            # extracting densities
+            core_density.append(hammerdict[epoch]['core_moments']['n'])
+            neck_density.append(hammerdict[epoch]['neck_moments']['n'])
+            hammer_density.append(hammerdict[epoch]['hammer_moments']['n'])
+            total_hampy_density.append(hammerdict[epoch]['core_moments']['n'] + 
+                                       hammerdict[epoch]['neck_moments']['n'] + 
+                                       hammerdict[epoch]['hammer_moments']['n'])
+
+            dt_arr.append(epoch_arr[epoch_idx])
+            # finding the closest epoch in the magnetic field data
+            Bepoch = np.argmin(np.abs(span_data.L3_data_fullday['epoch'] - epoch))
+            B_vec_inst.append(span_data.L3_data_fullday['MAGF_INST'][Bepoch])
+            span_density.append(span_data.L3_data_fullday['DENS'][Bepoch])
+            neck_vdrift.append(hammerdict[epoch]['neck_moments']['Ux'] - hammerdict[epoch]['core_moments']['Ux'])
+            hammer_vdrift.append(hammerdict[epoch]['hammer_moments']['Ux'] - hammerdict[epoch]['core_moments']['Ux'])
+
+        except:
+            pass
+
+    # making array-like from list
+    core_density = np.asarray(core_density)
+    neck_density = np.asarray(neck_density)
+    hammer_density = np.asarray(hammer_density)
+    total_hampy_density = np.asarray(total_hampy_density)
+    span_density = np.asarray(span_density)
+    for component in components:
+        U[f'{component}']['Ux'] = np.asarray(U[f'{component}']['Ux'])
+        U[f'{component}']['Uy'] = np.asarray(U[f'{component}']['Uy'])
+        U[f'{component}']['Uz'] = np.asarray(U[f'{component}']['Uz'])
+    T_tensor['core'] = np.asarray(T_tensor['core'])
+    T_tensor['neck'] = np.asarray(T_tensor['neck'])
+    T_tensor['hammer'] = np.asarray(T_tensor['hammer'])
+    dt_arr = cdflib.cdfepoch.to_datetime(np.asarray(dt_arr))
+    B_vec_inst = np.asarray(B_vec_inst)
+    neck_vdrift = np.asarray(neck_vdrift)
+    hammer_vdrift = np.asarray(hammer_vdrift)
+    span_Bmag = np.linalg.norm(B_vec_inst, axis=1)
+
+    # computing the parallel and perpendicular temperatures
+    T_perp = {}
+    T_parallel = {}
+    T_ani = {}
+
+    T_perp['core'], T_parallel['core'], T_ani['core'] = find_Tanisotropy(T_tensor['core'], span_data.L3_data_fullday['MAGF_INST'],
+                                                                         span_data.L3_data_fullday['epoch'], epoch_arr)
+    T_perp['neck'], T_parallel['neck'], T_ani['neck'] = find_Tanisotropy(T_tensor['neck'], span_data.L3_data_fullday['MAGF_INST'],\
+                                                                         span_data.L3_data_fullday['epoch'], epoch_arr)
+    T_perp['hammer'], T_parallel['hammer'], T_ani['hammer'] = find_Tanisotropy(T_tensor['hammer'], span_data.L3_data_fullday['MAGF_INST'],\
+                                                                               span_data.L3_data_fullday['epoch'], epoch_arr)
+
+    return core_density, neck_density, hammer_density, total_hampy_density, span_density, T_perp, T_parallel, T_ani,\
+           dt_arr, B_vec_inst, neck_vdrift, hammer_vdrift, span_Bmag, U

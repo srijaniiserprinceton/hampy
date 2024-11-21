@@ -23,8 +23,8 @@ def read_pickle(fname):
 
 if __name__=='__main__':
     # used defined start and end times in YYYY-MM-DD/hh:mm:ss format
-    tstart = '2020-02-01/00:00:00'
-    tend   = '2020-02-01/23:59:59'
+    tstart = '2020-01-25/00:00:00'
+    tend   = '2020-02-04/23:59:59'
 
     # setting up the data loading process [processing will happen one day at a time]
     span_data = load_data.span(tstart, tend)
@@ -153,12 +153,12 @@ if __name__=='__main__':
                         day_filter_dict[hammer_epoch]['og_flag'] = og_flag
 
                         # sys.exit()
-
+                        '''
                         if(og_flag == True):
                             hamcounter += 1
                             print(f'# OG Hammerhead detected: {hamcounter}')
 
-                            '''
+                            
                             # plotting and saving
                             fig, ax = plt.subplots(1,1)
                             vmin, vmax = -1, 8
@@ -197,6 +197,6 @@ if __name__=='__main__':
 
         # plot_tools.plot_temperature_anisotropy(day_filter_dict, span_data, day_idx)
         # plot_tools.compare_density(day_filter_dict, span_data, day_idx)
-        plot_tools.plot_Tani_2d_hist(day_filter_dict, span_data, day_idx)
+        # plot_tools.plot_Tani_2d_hist(day_filter_dict, span_data, day_idx)
 
 

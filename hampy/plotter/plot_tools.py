@@ -86,7 +86,7 @@ def plot_temperature_anisotropy(hammerdict, span_data, daynum, og_only=True, ret
     plt.savefig(f'plots/Tani_timeseries_{daynum}.pdf')
 
     plt.figure()
-    plt.hist(Tani_neck, range=(0, 0), bins=200, alpha=0.4, label=r'$T_{\rm{ani, neck}}$', histtype='step')
+    plt.hist(Tani_neck, range=(0, 20), bins=200, alpha=0.4, label=r'$T_{\rm{ani, neck}}$', histtype='step')
     plt.hist(Tani_hammer, range=(0, 20), bins=200, label=r'$T_{\rm{ani, hammer}}$', histtype='step')
     plt.hist(Tani_core, range=(0, 20), bins=200, label=r'$T_{\rm{ani, core}}$', histtype='step')
     plt.xlim([0,7.5])
