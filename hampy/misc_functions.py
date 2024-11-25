@@ -1,5 +1,22 @@
 import numpy as np
 import cdflib
+import astropy.constants as c
+
+def Tani_beta_instability_relations(beta_arr):
+    # making a beta array using extreme values of beta
+    beta = np.logspace(np.log10(beta_arr.min()), np.log10(beta_arr.max()), 100)
+
+    # using values from Hellinger et al 2006 (https://doi.org/10.1029/2006GL025925)
+    a = [0.43, 0.77, -0.47, -1.4]
+    b = [0.42, 0.76, 0.53, 1.0]
+    beta0 = [-0.0004, -0.016, 0.59, -0.11]
+
+    T_ani = np.zeros((4, len(beta)))
+
+    for i in range(4):
+        T_ani[i] = 1 + a[i] / np.power((beta - beta0[i]), b[i])
+
+    return beta, T_ani
 
 def convert_to_tensor(input_array):
     N_time = input_array.shape[0]
@@ -85,10 +102,10 @@ def find_Tanisotropy(T_tensor, B, spi_epoch, hammerepoch):
         T_perpendicular.append(T_perp)
         Anisotropy.append(T_perp/T_para)
 
-    return np.asarray(T_perp), np.asarray(T_parallel), np.asarray(Anisotropy)
+    return np.asarray(T_perpendicular), np.asarray(T_parallel), np.asarray(Anisotropy)
 
 
-def extract_params(hammerdict, span_data, og_only=True):
+def extract_params(hammerdict, span_data, og_only=True, min_hammer_cells=10):
     # to store density moments
     core_density = []
     neck_density = []
@@ -102,6 +119,9 @@ def extract_params(hammerdict, span_data, og_only=True):
     # finding the times in UTC
     epoch_arr = np.asarray(list(hammerdict.keys()))
     dt_arr = []
+
+    # distance from sun
+    dist_rsun = []
 
     # to store drift velocity
     neck_vdrift = []
@@ -127,7 +147,8 @@ def extract_params(hammerdict, span_data, og_only=True):
 
     for epoch_idx, epoch in enumerate(hammerdict.keys()):
         try:
-            if(og_only):
+            if(hammerdict[epoch]['Ncells_hammer'] < min_hammer_cells): continue
+            if(og_only): 
                 if(not hammerdict[epoch]['og_flag']): continue
 
             for component in components:
@@ -157,6 +178,7 @@ def extract_params(hammerdict, span_data, og_only=True):
             dt_arr.append(epoch_arr[epoch_idx])
             # finding the closest epoch in the magnetic field data
             Bepoch = np.argmin(np.abs(span_data.L3_data_fullday['epoch'] - epoch))
+            dist_rsun.append(span_data.L3_data_fullday['SUN_DIST'][Bepoch])
             B_vec_inst.append(span_data.L3_data_fullday['MAGF_INST'][Bepoch])
             span_density.append(span_data.L3_data_fullday['DENS'][Bepoch])
             neck_vdrift.append(hammerdict[epoch]['neck_moments']['Ux'] - hammerdict[epoch]['core_moments']['Ux'])
@@ -179,6 +201,7 @@ def extract_params(hammerdict, span_data, og_only=True):
     T_tensor['neck'] = np.asarray(T_tensor['neck'])
     T_tensor['hammer'] = np.asarray(T_tensor['hammer'])
     dt_arr = cdflib.cdfepoch.to_datetime(np.asarray(dt_arr))
+    dist_rsun = np.asarray(dist_rsun) / c.R_sun.to('km').value
     B_vec_inst = np.asarray(B_vec_inst)
     neck_vdrift = np.asarray(neck_vdrift)
     hammer_vdrift = np.asarray(hammer_vdrift)
@@ -197,4 +220,4 @@ def extract_params(hammerdict, span_data, og_only=True):
                                                                                span_data.L3_data_fullday['epoch'], epoch_arr)
 
     return core_density, neck_density, hammer_density, total_hampy_density, span_density, T_perp, T_parallel, T_ani,\
-           dt_arr, B_vec_inst, neck_vdrift, hammer_vdrift, span_Bmag, U
+           dt_arr, B_vec_inst, neck_vdrift, hammer_vdrift, span_Bmag, U, dist_rsun

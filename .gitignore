@@ -8,3 +8,7 @@ __pycache__
 *.egg-info
 *.pkl
 *.ipynb
+*.bsp
+spice_data
+*.fts.gz
+*.png

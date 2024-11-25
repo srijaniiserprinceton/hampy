@@ -23,8 +23,8 @@ def read_pickle(fname):
 
 if __name__=='__main__':
     # used defined start and end times in YYYY-MM-DD/hh:mm:ss format
-    tstart = '2020-01-25/00:00:00'
-    tend   = '2020-02-04/23:59:59'
+    tstart = '2020-01-29/00:00:00'
+    tend   = '2020-01-29/23:59:59'
 
     # setting up the data loading process [processing will happen one day at a time]
     span_data = load_data.span(tstart, tend)
@@ -93,6 +93,8 @@ if __name__=='__main__':
             pixsum = np.nansum(log_df_theta, axis=1)
             pixsum = pixsum / np.nanmax(pixsum)
 
+            if(np.nansum(~np.isnan(pixsum)) < 1): continue
+
             # detecting soft hammerhead
             hammerline_sm, hammerflag, peak_idx, isedgecase, intdip_idx = f.softham_finder(pixsum)
             # hammerflag, peak_idx, isedgecase, intdip_idx = f.softham_finder(pixsum)
@@ -152,7 +154,9 @@ if __name__=='__main__':
                                                                           span_data.VDF_dict['vdf'][time_idx]*1.0)
                         day_filter_dict[hammer_epoch]['og_flag'] = og_flag
 
-                        # sys.exit()
+                        # finding the number of cells in the hammerhead that are not zero or nan
+                        day_filter_dict[hammer_epoch]['Ncells_hammer'] = np.sum(~np.isnan(hammer))
+                        
                         '''
                         if(og_flag == True):
                             hamcounter += 1
@@ -184,7 +188,8 @@ if __name__=='__main__':
 
                             plt.savefig(f'HammerFigs/day_{day_idx}_time_{time_idx}.png')
                             plt.close()
-                            '''
+                        '''
+                            
                             
                         
 

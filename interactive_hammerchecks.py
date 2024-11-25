@@ -1,5 +1,5 @@
 import numpy as np
-import cdflib, bisect, sys
+import cdflib, bisect, sys, re
 from datetime import datetime
 import matplotlib.pyplot as plt; plt.ion(); plt.style.use('dark_background')
 # import matplotlib; matplotlib.use('tkagg')
@@ -241,7 +241,7 @@ def softham_finder(hammerline, intdip_threshold=0.5):
 
 if __name__=='__main__':
     # user defined date and time
-    year, month, date = 2020, 1, 31
+    year, month, date = 2020, 1, 29
     hour, minute, second = 18, 10, 1
 
     # timestamp for Verniero et al 2022 hammerhead
@@ -369,7 +369,8 @@ if __name__=='__main__':
     ax[0].set_ylim(-500,500)
     ax[0].set_xlabel('$v_x$ km/s')
     ax[0].set_ylabel('$v_z$ km/s')
-    ax[0].set_title(f'{str(epoch[int(tSliceIndex)])}')
+    time_str = re.split('[.]', str(epoch[tSliceIndex]))[0]
+    ax[0].set_title(f'{time_str}')
     ax[0].set_aspect('equal')
 
     # velocity grid for interpolation
@@ -444,7 +445,8 @@ if __name__=='__main__':
         ax[0].set_aspect('equal')
         ax[0].set_xlabel('$v_x$ km/s')
         ax[0].set_ylabel('$v_z$ km/s')
-        ax[0].set_title(f'{str(epoch[int(time_slider.val)])}')
+        time_str = re.split('[.]', str(epoch[int(time_slider.val)]))[0]
+        ax[0].set_title(f'{time_str}')
         ax[0].plot(sw_x, sw_y, '--w')
 
         df_phi = np.nansum(vdf_dict['vdf'], axis=2)
@@ -489,7 +491,8 @@ if __name__=='__main__':
                 ax[0].set_aspect('equal')
                 ax[0].set_xlabel('$v_x$ km/s')
                 ax[0].set_ylabel('$v_z$ km/s')
-                ax[0].set_title(f'{str(epoch[int(time_slider.val)])}')
+                time_str = re.split('[.]', str(epoch[int(time_slider.val)]))[0]
+                ax[0].set_title(f'{time_str}')
                 ax[0].plot(sw_x, sw_y, '--w')
                 ax[0].scatter(vx_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D],
                               vz_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D], marker='o', color='red')
@@ -498,11 +501,11 @@ if __name__=='__main__':
                 try:
                     core, neck, hammer, og_flag = f.hamslicer(convmat, log_df_theta_span, vel_hamlet)
                     ax[0].contourf(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(core),
-                                cmap='Reds', rasterized='True', vmin=vmin, vmax=vmax)
+                                cmap='YlGn', rasterized='True', vmin=vmin, vmax=vmax, levels=20) # Reds
                     ax[0].contourf(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(neck),
-                                cmap='bone', rasterized='True', vmin=vmin, vmax=vmax)
+                                cmap='hot', rasterized='True', vmin=vmin, vmax=vmax, levels=20) # bone
                     ax[0].contourf(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(hammer),
-                                cmap='hot', rasterized='True', vmin=vmin, vmax=vmax)
+                                cmap='pink', rasterized='True', vmin=vmin, vmax=vmax, levels=20) # hot
                     ax[0].scatter(vx_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D],
                                 vz_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D], marker='o', color='red')
                     ax[0].scatter(vx_plane_theta[convmat.gap_yvals_2D, convmat.gap_xvals_2D],
@@ -513,7 +516,8 @@ if __name__=='__main__':
                     ax[0].set_aspect('equal')
                     ax[0].set_xlabel('$v_x$ km/s')
                     ax[0].set_ylabel('$v_z$ km/s')
-                    ax[0].set_title(f'{str(epoch[int(time_slider.val)])}')
+                    time_str = re.split('[.]', str(epoch[int(time_slider.val)]))[0]
+                    ax[0].set_title(f'{time_str}')
                 
                 except:
                     ax[0].contourf(vx_plane_theta.T, vz_plane_theta.T, log_df_theta_span,
@@ -524,7 +528,8 @@ if __name__=='__main__':
                     ax[0].set_aspect('equal')
                     ax[0].set_xlabel('$v_x$ km/s')
                     ax[0].set_ylabel('$v_z$ km/s')
-                    ax[0].set_title(f'{str(epoch[int(time_slider.val)])}')
+                    time_str = re.split('[.]', str(epoch[int(time_slider.val)]))[0]
+                    ax[0].set_title(f'{time_str}')
                     ax[0].scatter(vx_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D],   
                               vz_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D], marker='o', color='red')
                     ax[0].scatter(vx_plane_theta[convmat.gap_yvals_2D, convmat.gap_xvals_2D],
