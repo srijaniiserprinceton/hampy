@@ -48,6 +48,8 @@ class span:
         for i in range(delta.days + 1):
             self.day_arr = np.append(self.day_arr, self.tstart + timedelta(days=i))
 
+        print(self.day_arr)
+
     def get_VDFdict_at_day(self, cdf_VDfile):
         epochSlice  = cdf_VDfile['EPOCH'][self.tidx_start: self.tidx_end]
         thetaSlice  = cdf_VDfile['THETA'][self.tidx_start: self.tidx_end,:]
@@ -105,7 +107,7 @@ class span:
         self.VDF_dict = self.get_VDFdict_at_day(fullday_dat)
 
         # clipping the L3 spi data
-        self.L3_data_fullday = self.download_L3_data(self.day_arr[day_idx])
+        self.L3_data_fullday = self.download_L3_data(self.day_arr[day_idx], CREDENTIALS=self.credentials)
 
     def VDfile_directoryRemote(self, user_datetime):
         '''
@@ -146,11 +148,15 @@ class span:
         return dat
 
     def download_VDF_file(self, user_datetime, CREDENTIALS=None):
+        tstart = f'{user_datetime.year:04d}-{user_datetime.month:02d}-{user_datetime.day:02d}/00:00:00'
+        tend = f'{user_datetime.year:04d}-{user_datetime.month:02d}-{user_datetime.day:02d}/23:59:59'
+        trange = [tstart, tend]
+        
         if CREDENTIALS:
-            files = pyspedas.psp.spi(user_datetime, datatype='spi_sf00', level='L2', notplot=True, time_clip=True,
+            files = pyspedas.psp.spi(trange, datatype='spi_sf00', level='L2', notplot=True, time_clip=True,
                     downloadonly=True, last_version=True, username=CREDENTIALS[0], password=CREDENTIALS[1])
         else:
-            files = pyspedas.psp.spi(user_datetime, datatype='spi_sf00_8dx32ex8a', level='l2', notplot=True, time_clip=True, downloadonly=True, last_version=True)
+            files = pyspedas.psp.spi(trange, datatype='spi_sf00_8dx32ex8a', level='l2', notplot=True, time_clip=True, downloadonly=True, last_version=True)
 
         dat_raw = cdflib.cdf_to_xarray(*files)
         dat = {}
