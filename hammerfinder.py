@@ -167,7 +167,7 @@ if __name__=='__main__':
                             hamcounter += 1
                             print(f'# OG Hammerhead detected: {hamcounter}')
 
-                        
+                        '''
                         # plotting and saving
                         fig, ax = plt.subplots(1,1)
                         vmin, vmax = -1, 8
@@ -196,6 +196,7 @@ if __name__=='__main__':
 
                         plt.savefig(f'HammerFigs/day_{day_idx}_time_{time_idx}.png')
                         plt.close()
+                        '''
                         
                             
                             
