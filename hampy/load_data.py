@@ -2,6 +2,13 @@ import numpy as np
 import pyspedas, pytplot, re, os, cdflib, bisect, wget
 from datetime import date, timedelta, datetime
 
+def read_credentials():
+    package_dir = os.getcwd()  # os.path.dirname(current_dir)
+    with open(f"{package_dir}/.credentials", "r") as f:
+        credentials = f.read().splitlines()
+
+    return credentials
+
 class span:
     def __init__(self, tstart, tend):
         # formatting to datetime
@@ -20,6 +27,9 @@ class span:
 
         # the VDF dictionary which gets updated for each day (to avoid loading too much into memory)
         self.tidx_start, self.tidx_end, self.VDF_dict = None, None, {}
+
+        # loading credentials
+        self.credentials = read_credentials()
     
     def parse_to_datetime(self, tstring):
         year, month, date, hour, minute, second = np.asarray(re.split('[-,/,:]', tstring)).astype('int')
@@ -78,7 +88,7 @@ class span:
         self.tidx_start, self.tidx_end, self.VDF_dict = None, None, {}
 
         # load the data from CDF file for this day (download file if needed)
-        fullday_dat = self.download_VDF_file(self.day_arr[day_idx])
+        fullday_dat = self.download_VDF_file(self.day_arr[day_idx], CREDENTIALS=self.credentials)
 
         # getting the limits in time index for this day
         epoch = cdflib.cdfepoch.to_datetime(fullday_dat['EPOCH'])
@@ -137,7 +147,8 @@ class span:
 
     def download_VDF_file(self, user_datetime, CREDENTIALS=None):
         if CREDENTIALS:
-            files = pyspedas.psp.spi(trange, datatype='spi_sf00', level='L2', notplot=True, time_clip=True, downloadonly=True, last_version=True, username=CREDENTIALS[0], password=CREDENTIALS[1])
+            files = pyspedas.psp.spi(trange, datatype='spi_sf00', level='L2', notplot=True, time_clip=True,
+                    downloadonly=True, last_version=True, username=CREDENTIALS[0], password=CREDENTIALS[1])
         else:
             files = pyspedas.psp.spi(trange, datatype='spi_sf00_8dx32ex8a', level='l2', notplot=True, time_clip=True, downloadonly=True, last_version=True)
 
@@ -154,7 +165,7 @@ class span:
         return dat
 
 
-    def download_L3_data(self, user_datetime):
+    def download_L3_data(self, user_datetime, CREDENTIALS=None):
         yyyy, mm, dd = user_datetime.year, user_datetime.month, user_datetime.day
 
         trange = [f'{yyyy}-{mm}-{dd}/00:00:00', f'{yyyy}-{mm}-{dd}/23:59:59']
@@ -166,8 +177,8 @@ class span:
         except:
             spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00', level='L3',
                                         time_clip=True, get_support_data= True, varnames=['*'],
-                                        notplot=True, downloadonly=True, username='sbdas',
-                                        password='SlapHappeeGranpappy01238')
+                                        notplot=True, downloadonly=True, username=CREDENTIALS[0],
+                                        password=CREDENTIALS[1])
             dat = cdflib.CDF(spi_vars[0])
 
         return dat

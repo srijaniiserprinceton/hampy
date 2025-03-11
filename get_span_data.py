@@ -16,6 +16,11 @@ simplefilter(action='ignore', category=DeprecationWarning)
 mass_p = 0.010438870      #proton mass in units eV/c^2 where c = 299792 km/s
 charge_p = 1              #proton charge in units eV
 
+
+package_dir = os.getcwd()  # os.path.dirname(current_dir)
+with open(f"{package_dir}/.credentials", "r") as f:
+    CREDENTIALS = f.read().splitlines()
+
 def yyyymmdd(dt) : return f"{dt.year:04d}{dt.month:02d}{dt.day:02d}"
 
 def VDfile_directoryRemote(user_datetime):
@@ -60,8 +65,8 @@ def download_L3_data(user_datetime):
     except:
         spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00', level='L3',
                                     time_clip=True, get_support_data= True, varnames=['*'],
-                                    notplot=True, downloadonly=True, username='sbdas',
-                                    password='SlapHappeeGranpappy01238')
+                                    notplot=True, downloadonly=True, username=CREDENTIALS[0],
+                                    password=CREDENTIALS[1])
         dat = cdflib.CDF(spi_vars[0])
 
     return dat

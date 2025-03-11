@@ -12,3 +12,4 @@ __pycache__
 spice_data
 *.fts.gz
 *.png
+.credentials
