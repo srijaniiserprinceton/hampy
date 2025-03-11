@@ -147,10 +147,10 @@ class span:
 
     def download_VDF_file(self, user_datetime, CREDENTIALS=None):
         if CREDENTIALS:
-            files = pyspedas.psp.spi(trange, datatype='spi_sf00', level='L2', notplot=True, time_clip=True,
+            files = pyspedas.psp.spi(user_datetime, datatype='spi_sf00', level='L2', notplot=True, time_clip=True,
                     downloadonly=True, last_version=True, username=CREDENTIALS[0], password=CREDENTIALS[1])
         else:
-            files = pyspedas.psp.spi(trange, datatype='spi_sf00_8dx32ex8a', level='l2', notplot=True, time_clip=True, downloadonly=True, last_version=True)
+            files = pyspedas.psp.spi(user_datetime, datatype='spi_sf00_8dx32ex8a', level='l2', notplot=True, time_clip=True, downloadonly=True, last_version=True)
 
         dat_raw = cdflib.cdf_to_xarray(*files)
         dat = {}
