@@ -2,9 +2,6 @@ import numpy as np
 import pyspedas, pytplot, re, os, cdflib, bisect, wget
 from datetime import date, timedelta, datetime
 
-try: import cdflib.xarray
-except: pass
-
 def read_credentials():
     package_dir = os.getcwd()  # os.path.dirname(current_dir)
     with open(f"{package_dir}/.credentials", "r") as f:
@@ -161,17 +158,15 @@ class span:
         else:
             files = pyspedas.psp.spi(trange, datatype='spi_sf00_8dx32ex8a', level='l2', notplot=True, time_clip=True, downloadonly=True, last_version=True)
 
-        try: dat_raw = cdflib.cdf_to_xarray(*files)
-        except: dat_raw = cdflib.xarray.cdf_to_xarray(*files)
-
+        dat_raw = cdflib.CDF(files[0])
         dat = {}
 
         # creating the data slice (1 day max)
-        dat['EPOCH']  = dat_raw['Epoch'].data
-        dat['THETA']  = dat_raw['THETA'].data.reshape((-1,8,32,8))
-        dat['PHI']    = dat_raw['PHI'].data.reshape((-1,8,32,8))
-        dat['ENERGY'] = dat_raw['ENERGY'].data.reshape((-1,8,32,8))
-        dat['EFLUX']  = dat_raw['EFLUX'].data.reshape((-1,8,32,8))
+        dat['EPOCH']  = dat_raw['Epoch']
+        dat['THETA']  = dat_raw['THETA'].reshape((-1,8,32,8))
+        dat['PHI']    = dat_raw['PHI'].reshape((-1,8,32,8))
+        dat['ENERGY'] = dat_raw['ENERGY'].reshape((-1,8,32,8))
+        dat['EFLUX']  = dat_raw['EFLUX'].reshape((-1,8,32,8))
 
         return dat
 

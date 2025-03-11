@@ -23,8 +23,8 @@ def read_pickle(fname):
 
 if __name__=='__main__':
     # used defined start and end times in YYYY-MM-DD/hh:mm:ss format
-    tstart = '2024-07-01/16:30:00'
-    tend   = '2024-07-01/17:20:00'
+    tstart = '2024-12-23/00:00:00'
+    tend   = '2024-12-23/23:59:59'
 
     # setting up the data loading process [processing will happen one day at a time]
     span_data = load_data.span(tstart, tend)
@@ -208,7 +208,7 @@ if __name__=='__main__':
         # writing the pkl file
         try: date_str = re.split('[ ]', str(epoch[0]))[0]
         except: date_str = re.split('[T]', str(epoch[0]))[0]
-        
+
         write_pickle(day_filter_dict, f'hamstring_{date_str}')
 
         # plot_tools.plot_temperature_anisotropy(day_filter_dict, span_data, day_idx)
