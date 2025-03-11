@@ -106,9 +106,11 @@ class span:
         VDF_RemoteDir = f'http://w3sweap.cfa.harvard.edu/pub/data/sci/sweap/spi/L2/spi_sf00/{user_datetime.year:04d}/{user_datetime.month:02d}/'
         VDF_filename = f'psp_swp_spi_sf00_L2_8Dx32Ex8A_{yyyymmdd(user_datetime)}_v04.cdf'
 
+        print(VDF_RemoteDir, VDF_filename)
+
         return VDF_RemoteDir, VDF_filename
 
-    def download_VDF_file(self, user_datetime):
+    def download_VDF_file_old(self, user_datetime):
         # Import from file directory
         VDF_RemoteDir, VDF_filename = self.VDfile_directoryRemote(user_datetime)
 
@@ -133,14 +135,40 @@ class span:
 
         return dat
 
+    def download_VDF_file(self, user_datetime, CREDENTIALS=None):
+        if CREDENTIALS:
+            files = pyspedas.psp.spi(trange, datatype='spi_sf00', level='L2', notplot=True, time_clip=True, downloadonly=True, last_version=True, username=CREDENTIALS[0], password=CREDENTIALS[1])
+        else:
+            files = pyspedas.psp.spi(trange, datatype='spi_sf00_8dx32ex8a', level='l2', notplot=True, time_clip=True, downloadonly=True, last_version=True)
+
+        dat_raw = cdflib.cdf_to_xarray(*files)
+        dat = {}
+
+        # creating the data slice (1 day max)
+        dat['EPOCH']  = dat_raw['Epoch'].data
+        dat['THETA']  = dat_raw['THETA'].data.reshape((-1,8,32,8))
+        dat['PHI']    = dat_raw['PHI'].data.reshape((-1,8,32,8))
+        dat['ENERGY'] = dat_raw['ENERGY'].data.reshape((-1,8,32,8))
+        dat['EFLUX']  = dat_raw['EFLUX'].data.reshape((-1,8,32,8))
+
+        return dat
+
+
     def download_L3_data(self, user_datetime):
         yyyy, mm, dd = user_datetime.year, user_datetime.month, user_datetime.day
 
         trange = [f'{yyyy}-{mm}-{dd}/00:00:00', f'{yyyy}-{mm}-{dd}/23:59:59']
-        spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00_l3_mom', level='l3',
-                                    time_clip=True, get_support_data= True, varnames=['*'],
-                                    notplot=True, downloadonly=True)
-        dat = cdflib.CDF(spi_vars[0])
+        try:
+            spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00_l3_mom', level='l3',
+                                        time_clip=True, get_support_data= True, varnames=['*'],
+                                        notplot=True, downloadonly=True)
+            dat = cdflib.CDF(spi_vars[0])
+        except:
+            spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00', level='L3',
+                                        time_clip=True, get_support_data= True, varnames=['*'],
+                                        notplot=True, downloadonly=True, username='sbdas',
+                                        password='SlapHappeeGranpappy01238')
+            dat = cdflib.CDF(spi_vars[0])
 
         return dat
 

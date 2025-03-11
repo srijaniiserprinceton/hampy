@@ -23,8 +23,8 @@ def read_pickle(fname):
 
 if __name__=='__main__':
     # used defined start and end times in YYYY-MM-DD/hh:mm:ss format
-    tstart = '2020-01-29/00:00:00'
-    tend   = '2020-01-29/23:59:59'
+    tstart = '2024-07-01/16:30:00'
+    tend   = '2024-07-01/17:20:00'
 
     # setting up the data loading process [processing will happen one day at a time]
     span_data = load_data.span(tstart, tend)
@@ -52,12 +52,17 @@ if __name__=='__main__':
 
         # DATA FORMAT OF THE VDF: phi is along dimension 0, while theta is along 2
         # choosing a cut through theta for interpolating
-        phi_cut=0 
+        phi_cut=1
 
         phi_plane = span_data.VDF_dict['phi'][0,phi_cut,:,:]
         theta_plane = span_data.VDF_dict['theta'][0,phi_cut,:,:]
         energy_plane = span_data.VDF_dict['energy'][0,phi_cut,:,:]
         vel_plane = np.sqrt(2 * charge_p * energy_plane / mass_p)
+
+        phi_plane_nan = np.sum(np.isnan(phi_plane))
+        theta_plane_nan = np.sum(np.isnan(theta_plane))
+        energy_plane_nan = np.sum(np.isnan(energy_plane))
+        vel_plane_nan = np.sum(np.isnan(vel_plane))
 
         vx_plane_theta = vel_plane * np.cos(np.radians(phi_plane)) * np.cos(np.radians(theta_plane))
         vy_plane_theta = vel_plane * np.sin(np.radians(phi_plane)) * np.cos(np.radians(theta_plane))
@@ -157,38 +162,42 @@ if __name__=='__main__':
                         # finding the number of cells in the hammerhead that are not zero or nan
                         day_filter_dict[hammer_epoch]['Ncells_hammer'] = np.sum(~np.isnan(hammer))
                         
-                        '''
+                        
                         if(og_flag == True):
                             hamcounter += 1
                             print(f'# OG Hammerhead detected: {hamcounter}')
 
+                        
+                        # plotting and saving
+                        fig, ax = plt.subplots(1,1)
+                        vmin, vmax = -1, 8
+                        sw_x, sw_y = vel_hamlet * np.cos(theta_sw_vel), vel_hamlet * np.sin(theta_sw_vel)  
+
+                        vmin, vmax = np.nanmin(log_df_theta_span), np.nanmax(log_df_theta_span)
+
+                        ax.pcolormesh(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(core),
+                                    cmap='YlGn', rasterized='True', vmin=vmin, vmax=vmax)
+                        ax.pcolormesh(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(neck),
+                                    cmap='hot', rasterized='True', vmin=vmin, vmax=vmax)
+                        ax.pcolormesh(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(hammer),
+                                    cmap='pink', rasterized='True', vmin=vmin, vmax=vmax)
+                        ax.scatter(vx_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D],
+                                    vz_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D], marker='o', color='red')
+                        ax.scatter(vx_plane_theta[convmat.gap_yvals_2D, convmat.gap_xvals_2D],
+                                    vz_plane_theta[convmat.gap_yvals_2D, convmat.gap_xvals_2D], marker='x', color='yellow')
+                        ax.plot(sw_x, sw_y, '--w')
+                        ax.set_xlim(-2000,0)
+                        ax.set_ylim(-1000,1000)
+                        ax.set_aspect('equal')
+                        ax.set_xlabel('$v_x$ km/s')
+                        ax.set_ylabel('$v_z$ km/s')
+                        time_str = re.split('[.]', str(epoch[int(time_idx)]))[0]
+                        ax.set_title(f'{time_str} | OG Flag = {og_flag}')
+
+                        plt.savefig(f'HammerFigs/day_{day_idx}_time_{time_idx}.png')
+                        plt.close()
+                        
                             
-                            # plotting and saving
-                            fig, ax = plt.subplots(1,1)
-                            vmin, vmax = -1, 8
-                            sw_x, sw_y = vel_hamlet * np.cos(theta_sw_vel), vel_hamlet * np.sin(theta_sw_vel)  
-
-                            ax.contourf(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(core),
-                                cmap='Reds', rasterized='True', vmin=vmin, vmax=vmax)
-                            ax.contourf(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(neck),
-                                        cmap='bone', rasterized='True', vmin=vmin, vmax=vmax)
-                            ax.contourf(vx_plane_theta.T, vz_plane_theta.T, np.ma.masked_invalid(hammer),
-                                        cmap='hot', rasterized='True', vmin=vmin, vmax=vmax)
-                            ax.scatter(vx_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D],
-                                        vz_plane_theta[convmat.gap_xvals_1D, convmat.gap_yvals_1D], marker='o', color='red')
-                            ax.scatter(vx_plane_theta[convmat.gap_yvals_2D, convmat.gap_xvals_2D],
-                                        vz_plane_theta[convmat.gap_yvals_2D, convmat.gap_xvals_2D], marker='x', color='yellow')
-                            ax.plot(sw_x, sw_y, '--w')
-                            ax.set_xlim(-1000,0)
-                            ax.set_ylim(-500,500)
-                            ax.set_aspect('equal')
-                            ax.set_xlabel('$v_x$ km/s')
-                            ax.set_ylabel('$v_z$ km/s')
-                            ax.set_title(f'VDF SPAN-I $\\theta$-plane | OG Flag = {og_flag}')
-
-                            plt.savefig(f'HammerFigs/day_{day_idx}_time_{time_idx}.png')
-                            plt.close()
-                        '''
                             
                             
                         

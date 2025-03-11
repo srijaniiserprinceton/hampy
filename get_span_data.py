@@ -52,10 +52,17 @@ def download_L3_data(user_datetime):
     yyyy, mm, dd = user_datetime.year, user_datetime.month, user_datetime.day
 
     trange = [f'{yyyy}-{mm}-{dd}/00:00:00', f'{yyyy}-{mm}-{dd}/23:59:59']
-    spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00_l3_mom', level='l3',
-                                time_clip=True, get_support_data= True, varnames=['*'],
-                                notplot=True, downloadonly=True)
-    dat = cdflib.CDF(spi_vars[0])
+    try:
+        spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00_l3_mom', level='l3',
+                                    time_clip=True, get_support_data= True, varnames=['*'],
+                                    notplot=True, downloadonly=True)
+        dat = cdflib.CDF(spi_vars[0])
+    except:
+        spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00', level='L3',
+                                    time_clip=True, get_support_data= True, varnames=['*'],
+                                    notplot=True, downloadonly=True, username='sbdas',
+                                    password='SlapHappeeGranpappy01238')
+        dat = cdflib.CDF(spi_vars[0])
 
     return dat
 

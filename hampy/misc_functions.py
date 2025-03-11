@@ -1,6 +1,7 @@
 import numpy as np
 import cdflib
 import astropy.constants as c
+from scipy.signal import savgol_filter
 
 def Tani_beta_instability_relations(beta_arr):
     # making a beta array using extreme values of beta
@@ -193,6 +194,10 @@ def extract_params(hammerdict, span_data, og_only=True, min_hammer_cells=10):
     hammer_density = np.asarray(hammer_density)
     total_hampy_density = np.asarray(total_hampy_density)
     span_density = np.asarray(span_density)
+
+    span_density_all = savgol_filter(np.asarray(span_data.L3_data_fullday['DENS']), 250, 3)
+    span_time_all = cdflib.cdfepoch.to_datetime(np.asarray(span_data.L3_data_fullday['epoch']))
+
     for component in components:
         U[f'{component}']['Ux'] = np.asarray(U[f'{component}']['Ux'])
         U[f'{component}']['Uy'] = np.asarray(U[f'{component}']['Uy'])
@@ -220,4 +225,4 @@ def extract_params(hammerdict, span_data, og_only=True, min_hammer_cells=10):
                                                                                span_data.L3_data_fullday['epoch'], epoch_arr)
 
     return core_density, neck_density, hammer_density, total_hampy_density, span_density, T_perp, T_parallel, T_ani,\
-           dt_arr, B_vec_inst, neck_vdrift, hammer_vdrift, span_Bmag, U, dist_rsun
+           dt_arr, B_vec_inst, neck_vdrift, hammer_vdrift, span_Bmag, U, dist_rsun, span_density_all, span_time_all

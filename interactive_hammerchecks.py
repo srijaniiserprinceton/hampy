@@ -241,12 +241,12 @@ def softham_finder(hammerline, intdip_threshold=0.5):
 
 if __name__=='__main__':
     # user defined date and time
-    year, month, date = 2020, 1, 29
-    hour, minute, second = 18, 10, 1
+    # year, month, date = 2024, 7, 1
+    # hour, minute, second = 17, 14, 00
 
     # timestamp for Verniero et al 2022 hammerhead
-    # year, month, date = 2020, 1, 29
-    # hour, minute, second = 18, 10, 1
+    year, month, date = 2020, 1, 29
+    hour, minute, second = 18, 10, 2
 
     # converting to datetime format to extract time index
     user_datetime = datetime(year, month, date)
@@ -304,15 +304,15 @@ if __name__=='__main__':
     im1 = ax[1].contourf(np.transpose(vx_plane_phi), np.transpose(vy_plane_phi), np.log10(np.transpose(df_phi)),
                            cmap=cmap, rasterized='True', vmin=vmin, vmax=vmax)
 
-    ax[1].set_xlim(-1000,0)
-    ax[1].set_ylim(-200,500)
+    ax[1].set_xlim(-2000,0)
+    ax[1].set_ylim(-200,1000)
     ax[1].set_xlabel('$v_x$ km/s')
     ax[1].set_ylabel('$v_y$ km/s')
     ax[1].set_title('VDF SPAN-I $\\phi$-plane')
     ax[1].set_aspect('equal')
 
     # choosing a cut through phi for plotting
-    phi_cut=0 
+    phi_cut=1 
 
     phi_plane = vdf_dict['phi'][phi_cut,:,:]
     theta_plane = vdf_dict['theta'][phi_cut,:,:]
@@ -365,8 +365,8 @@ if __name__=='__main__':
     #                        cmap='bone', rasterized='True', vmin=vmin, vmax=vmax)
     
 
-    ax[0].set_xlim(-1000,0)
-    ax[0].set_ylim(-500,500)
+    ax[0].set_xlim(-2000,0)
+    ax[0].set_ylim(-1000,1000)
     ax[0].set_xlabel('$v_x$ km/s')
     ax[0].set_ylabel('$v_z$ km/s')
     time_str = re.split('[.]', str(epoch[tSliceIndex]))[0]
@@ -414,6 +414,7 @@ if __name__=='__main__':
     axis_color = 'white'
     time_slider_ax  = fig.add_axes([0.4, 0.12, 0.2, 0.03], facecolor=axis_color)
     time_slider = Slider(time_slider_ax, r'$\mu_{\phi}$', 0, len(epoch), valinit=tSliceIndex)
+    # time_slider = Slider(time_slider_ax, r'$\mu_{\phi}$', tSliceIndex-100, tSliceIndex+100, valinit=tSliceIndex)
 
     # Define an action for modifying the line when any slider's value changes
     def sliders_on_changed(val):
@@ -440,8 +441,8 @@ if __name__=='__main__':
         ax[0].contourf(vx_plane_theta.T, vz_plane_theta.T, log_df_theta_span,
                        cmap=cmap, rasterized='True', vmin=vmin, vmax=vmax)
         ax[0].plot(sw_x, sw_y, '--w')
-        ax[0].set_xlim(-1000,0)
-        ax[0].set_ylim(-500,500)
+        ax[0].set_xlim(-2000,0)
+        ax[0].set_ylim(-1000,1000)
         ax[0].set_aspect('equal')
         ax[0].set_xlabel('$v_x$ km/s')
         ax[0].set_ylabel('$v_z$ km/s')
@@ -452,8 +453,8 @@ if __name__=='__main__':
         df_phi = np.nansum(vdf_dict['vdf'], axis=2)
         ax[1].contourf(np.transpose(vx_plane_phi), np.transpose(vy_plane_phi), np.log10(np.transpose(df_phi)),
                            cmap=cmap, rasterized='True', vmin=vmin, vmax=vmax)
-        ax[1].set_xlim(-1000,0)
-        ax[1].set_ylim(-200,500)
+        ax[1].set_xlim(-2000,0)
+        ax[1].set_ylim(-200,1000)
         ax[1].set_aspect('equal')
         ax[1].set_xlabel('$v_x$ km/s')
         ax[1].set_ylabel('$v_y$ km/s')
@@ -486,8 +487,8 @@ if __name__=='__main__':
                 ax[0].pcolormesh(vx_plane_theta.T, vz_plane_theta.T, log_df_theta_span,
                             cmap=cmap, rasterized='True', vmin=vmin, vmax=vmax)
                 ax[0].plot(sw_x, sw_y, '--w')
-                ax[0].set_xlim(-1000,0)
-                ax[0].set_ylim(-500,500)
+                ax[0].set_xlim(-2000,0)
+                ax[0].set_ylim(-1000,1000)
                 ax[0].set_aspect('equal')
                 ax[0].set_xlabel('$v_x$ km/s')
                 ax[0].set_ylabel('$v_z$ km/s')
@@ -511,8 +512,8 @@ if __name__=='__main__':
                     ax[0].scatter(vx_plane_theta[convmat.gap_yvals_2D, convmat.gap_xvals_2D],
                                 vz_plane_theta[convmat.gap_yvals_2D, convmat.gap_xvals_2D], marker='x', color='yellow')
                     ax[0].plot(sw_x, sw_y, '--w')
-                    ax[0].set_xlim(-1000,0)
-                    ax[0].set_ylim(-500,500)
+                    ax[0].set_xlim(-2000,0)
+                    ax[0].set_ylim(-1000,1000)
                     ax[0].set_aspect('equal')
                     ax[0].set_xlabel('$v_x$ km/s')
                     ax[0].set_ylabel('$v_z$ km/s')
@@ -523,8 +524,8 @@ if __name__=='__main__':
                     ax[0].contourf(vx_plane_theta.T, vz_plane_theta.T, log_df_theta_span,
                                 cmap=cmap, rasterized='True', vmin=vmin, vmax=vmax)
                     ax[0].plot(sw_x, sw_y, '--w')
-                    ax[0].set_xlim(-1000,0)
-                    ax[0].set_ylim(-500,500)
+                    ax[0].set_xlim(-2000,0)
+                    ax[0].set_ylim(-1000,1000)
                     ax[0].set_aspect('equal')
                     ax[0].set_xlabel('$v_x$ km/s')
                     ax[0].set_ylabel('$v_z$ km/s')

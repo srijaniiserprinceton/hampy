@@ -5,6 +5,7 @@ import cdflib, pickle, re, os
 from datetime import datetime, timedelta
 from scipy.interpolate import griddata
 import astropy.constants as c
+from scipy.stats.stats import pearsonr
 
 from hampy import misc_functions as misc_fn
 from hampy import load_data
@@ -16,6 +17,10 @@ def read_pickle(fname):
     with open(f'{fname}.pkl', 'rb') as handle:
         x = pickle.load(handle)
     return x
+
+def write_pickle(x, fname):
+    with open(f'{fname}.pkl', 'wb') as handle:
+        pickle.dump(x, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 def get_dates(start_date, end_date):
     start_yyyy, start_mm, start_dd = np.asarray(re.split('[-]', start_date)).astype('int')
@@ -31,13 +36,25 @@ def plot_density():
         plt.semilogy(global_prop_dict['dt_arr'], global_prop_dict[f'{component}_density'], '.', alpha=0.7,
                      label=f'{component}')
 
+    # plt.semilogy(global_prop_dict['span_time_all'], global_prop_dict['span_density_all'], 'w')
     plt.xlim([global_prop_dict['dt_arr'][0], global_prop_dict['dt_arr'][-1]])
-    plt.ylim([0, 1e4])
+    # plt.xlim([datetime(2024,4,1,0,0,0), datetime(2024,4,5,0,0,0)])
+    # plt.ylim([0, 1e4])
     plt.ylabel(r'Density in $\rm{cm}^{-3}$')
     plt.xlabel(r'Time')
     plt.legend()
     plt.tight_layout()
     plt.savefig(f'{dirname}/density_{start_date}_{end_date}.png')
+    plt.close()
+
+    plt.figure(figsize=(15,4))
+    plt.plot(global_prop_dict['dt_arr'],\
+             global_prop_dict['hammer_density']/global_prop_dict['neck_density'], '.w')
+    plt.ylabel(r'$n_{\rm{hammer}} / n_{\rm{neck}}$')
+    plt.ylim([0,2])
+    plt.xlabel('Time')
+    plt.tight_layout()
+    plt.savefig(f'{dirname}/density_hammer_neck_ratio.png')
     plt.close()
 
 def plot_velocity():
@@ -90,6 +107,44 @@ def plot_T_ani():
     plt.legend()
     plt.tight_layout()
     plt.savefig(f'{dirname}/Tani_histogram_{start_date}_{end_date}.png')
+    plt.close()
+
+
+    density_hampy = global_prop_dict['total_hampy_density']
+    span_Bmag = global_prop_dict['span_Bmag']
+    valfven = 21.8 * span_Bmag / np.sqrt(density_hampy)
+
+    fig, ax = plt.subplots(2, 1, figsize=(15,10), sharex=True)
+    Tani_effective = (global_prop_dict['T_ani']['hammer'] * global_prop_dict['hammer_density'] +\
+                      global_prop_dict['T_ani']['neck'] * global_prop_dict['neck_density'])/\
+                      (global_prop_dict['hammer_density'] + global_prop_dict['neck_density'])
+
+    # ax[0].scatter(global_prop_dict['dt_arr'],\
+    #               np.log10(Tani_effective/global_prop_dict['T_ani']['core']),
+    #               c=global_prop_dict['hammer_vdrift']/valfven)
+    ax[0].scatter(global_prop_dict['dt_arr'],\
+                  global_prop_dict['T_ani']['hammer'],
+                  c=global_prop_dict['hammer_vdrift']/valfven)
+    # ax[0].set_ylim([0, 2])
+    ax[0].set_ylabel(r'$Tani_{\rm{hammer+neck}} / Tani_{\rm{core}}$')
+    ax[0].set_title(r'Color = $V_{\rm{drift,hammer}} / V_{\rm{Alfven}}$')
+    
+    # finding the correlation coefficient
+    # xmin_idx = np.argmin(np.abs(global_prop_dict['dt_arr'] - datetime(2022,12,12,7,0,0)))
+    # xmax_idx = np.argmin(np.abs(global_prop_dict['dt_arr'] - datetime(2022,12,12,10,30,0)))
+    # x, y = global_prop_dict['dt_arr'], global_prop_dict['hammer_vdrift']/valfven
+    # corr_coeff = pearsonr(x[xmin_idx:xmax_idx+1], y[xmin_idx:xmax_idx+1])
+    # coeffs = numpy.polyfit(x, y, 1)
+    # ax[1].plot(coeffs[0] * x + coeffs[1], '--w')
+    ax[1].scatter(global_prop_dict['dt_arr'], global_prop_dict['hammer_vdrift']/valfven,
+                  c=global_prop_dict['T_ani']['hammer'],  cmap='Reds')
+    # ax[1].set_xlim([datetime(2022,9,6,15,0,0), datetime(2022,12,12,10,30,0)])
+    ax[1].set_xlim([None, datetime(2022,9,6,17,30,0)])
+    ax[1].set_ylim([-3, -1])
+    ax[1].set_xlabel('Time')
+    ax[1].set_ylabel(r'$V_{\rm{drift,hammer}} / V_{\rm{Alfven}}$')
+    ax[1].set_title(r'Color = $Tani_{\rm{hammer+neck}} / Tani_{\rm{core}}$')
+    plt.savefig(f'{dirname}/Tani_hammer_core_ratio.png')
     plt.close()
 
 def plot_as_function_of_distance(color=None):
@@ -170,7 +225,7 @@ def plot_T_ani_2d_hist():
     levels = np.linspace(0.5, 1, 5)
     ax[0].contour(xm1, ym1, h1_interp, levels=levels, colors='black')
     ax[0].set_xlabel(r'$n_{\rm{hammer}} / n_{\rm{total}}$')
-    ax[0].set_ylabel(r'$T_{\perp}/T_{||}$')
+    ax[0].set_ylabel(r'$(T_{\perp}/T_{||})_{\rm{hammer}}$')
     ax[0].set_xlim([0, 0.08])
     ax[0].set_ylim([0,8])
 
@@ -195,7 +250,7 @@ def plot_T_ani_2d_hist():
     levels = np.linspace(0.5, 1, 5)
     ax[1].contour(xm2, ym2, h2_interp, levels=levels, colors='black')
     ax[1].set_xlabel(r'$V_{\rm{drift,hammer}} / V_{\rm{Alfven}}$')
-    ax[1].set_ylabel(r'$T_{\perp}/T_{||}$')
+    ax[1].set_ylabel(r'$(T_{\perp}/T_{||})_{\rm{hammer}}$')
     ax[1].set_xlim([-3.5, -1.0])
     ax[1].set_ylim([0, 8])
 
@@ -242,11 +297,13 @@ def make_brazil_plots():
     beta = (global_prop_dict['total_hampy_density'] * 1e6) * c.k_B.value * (T_parallel * 1e6) * c.mu0.value \
            /(global_prop_dict['span_Bmag'] * 1e-9)**2
 
-    beta_brazil, Tani_brazil = misc_fn.Tani_beta_instability_relations(beta)
+    beta_arr = np.logspace(-3, 2, 200)
+    beta_brazil, Tani_brazil = misc_fn.Tani_beta_instability_relations(beta_arr)
     
     plt.figure()
     vdrift = -global_prop_dict['hammer_vdrift']
-    color = vdrift #(vdrift - vdrift.mean())/(vdrift.max() - vdrift.min())
+    # color = (vdrift - vdrift.mean())/(vdrift.max() - vdrift.min())
+    color = -1. *  vdrift / valfven
     sc = plt.scatter(beta, T_perp/T_parallel, s=1, c=color, alpha=0.5, cmap=cmap)
     # sc = plt.scatter(beta, global_prop_dict['T_ani']['hammer'], s=1, c=color, alpha=0.5, cmap=cmap)
     plt.plot(beta_brazil, Tani_brazil[0], '--w', label='i-c')
@@ -255,13 +312,13 @@ def make_brazil_plots():
     plt.plot(beta_brazil, Tani_brazil[3], 'w', label='o-f')
     plt.legend()
     plt.colorbar(sc)
-    plt.ylim([1e-1, 1e1])
+    plt.ylim([1e-1, 1e2])
     plt.xscale('log')
     plt.yscale('log')
-    plt.xlim([1e-1, 1e2])
+    plt.xlim([None, 1e2])
     plt.xlabel(r'$\beta_{||}$')
     plt.ylabel(r'$T_{\perp}/T_{||}$')
-    plt.title(r'$\sim V_{\rm{ham,drift}}$')
+    plt.title(r'$V_{\rm{ham,drift}} / V_{\rm{Alfven}}$')
     plt.tight_layout()
     plt.savefig(f'{dirname}/Brazil_plot_Vdrift.png')
     plt.close()
@@ -275,10 +332,10 @@ def make_brazil_plots():
     plt.plot(beta_brazil, Tani_brazil[3], 'w', label='o-f')
     plt.legend()
     plt.colorbar(sc)
-    plt.ylim([1e-1, 1e1])
+    plt.ylim([1e-1, 1e2])
     plt.xscale('log')
     plt.yscale('log')
-    plt.xlim([1e-1, 1e2])
+    plt.xlim([None, 1e2])
     plt.xlabel(r'$\beta_{||}$')
     plt.ylabel(r'$T_{\perp}/T_{||}$')
     plt.title(r'Distance in $R_{\rm{Sun}}$')
@@ -295,10 +352,10 @@ def make_brazil_plots():
     plt.plot(beta_brazil, Tani_brazil[3], 'w', label='o-f')
     plt.legend()
     plt.colorbar(sc)
-    plt.ylim([1e-1, 1e1])
+    plt.ylim([1e-1, 1e2])
     plt.xscale('log')
     plt.yscale('log')
-    plt.xlim([1e-1, 1e2])
+    plt.xlim([None, 1e2])
     plt.xlabel(r'$\beta_{||}$')
     plt.ylabel(r'$T_{\perp}/T_{||}$')
     plt.title(r'$n_{\rm{hammer}}/n_{\rm{total}}$')
@@ -372,12 +429,16 @@ def make_fish_plots():
     plt.savefig(f'{dirname}/Fishplot_orbit_Tani_hammer.png')
     plt.close()
 
-def make_global_prop():
+def make_global_prop(components):
+    # making the global properties dictionary
+    global_prop_dict = {}
     global_prop_dict['core_density'] = np.array([])
     global_prop_dict['neck_density'] = np.array([])
     global_prop_dict['hammer_density'] = np.array([])
     global_prop_dict['total_hampy_density'] = np.array([])
     global_prop_dict['span_density'] = np.array([])
+    global_prop_dict['span_density_all'] = np.array([])
+    global_prop_dict['span_time_all'] = np.array([])
     global_prop_dict['Ux'] = {}
     global_prop_dict['Uy'] = {}
     global_prop_dict['Uz'] = {}
@@ -400,9 +461,11 @@ def make_global_prop():
     global_prop_dict['orbit'] = None
     global_prop_dict['all_orbit'] = None
 
-def mince_props(hammer_dayprops):
+    return global_prop_dict
+
+def mince_props(hammer_dayprops, global_prop_dict, components):
     core_density, neck_density, hammer_density, total_hampy_density, span_density, T_perp, T_parallel, T_ani, dt_arr,\
-    B_vec_inst, neck_vdrift, hammer_vdrift, span_Bmag, U, dist_rsun = hammer_dayprops
+    B_vec_inst, neck_vdrift, hammer_vdrift, span_Bmag, U, dist_rsun, span_density_all, span_time_all = hammer_dayprops
 
     # inducting into the global dictionary
     global_prop_dict['core_density'] = np.append(global_prop_dict['core_density'], core_density)
@@ -426,15 +489,55 @@ def mince_props(hammer_dayprops):
     global_prop_dict['hammer_vdrift'] = np.append(global_prop_dict['hammer_vdrift'], hammer_vdrift)
     global_prop_dict['span_Bmag'] = np.append(global_prop_dict['span_Bmag'], span_Bmag)
 
+    global_prop_dict['span_density_all'] = np.append(global_prop_dict['span_density_all'], span_density_all)
+    global_prop_dict['span_time_all'] = np.append(global_prop_dict['span_time_all'], span_time_all)
+
     # getting the orbit trajectory
     global_prop_dict['orbit'] = orbit_trajectory.get_trajectory(dt_mission=global_prop_dict['dt_arr'])
     global_prop_dict['all_orbit'] = orbit_trajectory.get_trajectory(tstart=dates[0], tend=dates[-1])
 
-if __name__=='__main__':
-    tstart = '2020-05-27/00:00:00'
-    tend   = '2020-06-29/23:59:59'
 
-    og_only_flag = True
+def call_hamplotter(tstart, tend, og_only_flag, mincount=0, dir='.'):
+    # get all dates
+    start_date = re.split('[/]', tstart)[0]
+    end_date = re.split('[/]', tend)[0]
+    dates = get_dates(start_date, end_date)
+
+    dirname = f'plots/{start_date}_{end_date}'
+
+    if(os.path.exists(f'{dirname}')): pass
+    else:
+        os.mkdir(f'{dirname}')
+
+    components = np.array(['core', 'neck', 'hammer'])
+    
+    # initializing the dictionary attributes
+    global_prop_dict = make_global_prop(components)
+
+    span_data = load_data.span(tstart, tend)
+
+    for date_idx, date in enumerate(dates):
+        # loading the pickle file for that particular date
+        filename = f'{dir}/hamstring_{date.year:04d}-{date.month:02d}-{date.day:02d}'
+        hammerdict = read_pickle(filename)
+
+        # setting up the data loading process [processing will happen one day at a time]
+        span_data.start_new_day(date_idx)
+
+        try:
+            # retrieving the necessary parameters for that day and appending to the global list
+            hammer_props = misc_fn.extract_params(hammerdict, span_data, og_only=og_only_flag, min_hammer_cells=mincount)
+            mince_props(hammer_props, global_prop_dict, components)
+        except: continue
+
+    return global_prop_dict
+
+
+if __name__=='__main__':
+    tstart = '2024-07-01/16:30:00'
+    tend   = '2024-07-01/17:20:00'
+
+    og_only_flag = False
 
     # get all dates
     start_date = re.split('[/]', tstart)[0]
@@ -449,10 +552,8 @@ if __name__=='__main__':
 
     components = np.array(['core', 'neck', 'hammer'])
 
-    # making the global properties dictionary
-    global_prop_dict = {}
     # initializing the dictionary attributes
-    make_global_prop()
+    global_prop_dict = make_global_prop(components)
 
     span_data = load_data.span(tstart, tend)
 
@@ -466,8 +567,8 @@ if __name__=='__main__':
 
         try:
             # retrieving the necessary parameters for that day and appending to the global list
-            hammer_props = misc_fn.extract_params(hammerdict, span_data, og_only=og_only_flag, min_hammer_cells=20)
-            mince_props(hammer_props)
+            hammer_props = misc_fn.extract_params(hammerdict, span_data, og_only=og_only_flag, min_hammer_cells=0)
+            mince_props(hammer_props, global_prop_dict, components)
         except: continue
 
     # plotting the density moments for different components
@@ -478,4 +579,6 @@ if __name__=='__main__':
     plot_as_function_of_distance(color=global_prop_dict['T_ani']['hammer']/global_prop_dict['T_ani']['hammer'].max())
     make_brazil_plots()
     make_fish_plots()
+
+    write_pickle(global_prop_dict, f'{dirname}/global_prop_dict')
 
