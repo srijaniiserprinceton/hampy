@@ -2,6 +2,9 @@ import numpy as np
 import pyspedas, pytplot, re, os, cdflib, bisect, wget
 from datetime import date, timedelta, datetime
 
+try: import cdflib.xarray
+except: pass
+
 def read_credentials():
     package_dir = os.getcwd()  # os.path.dirname(current_dir)
     with open(f"{package_dir}/.credentials", "r") as f:
@@ -158,7 +161,9 @@ class span:
         else:
             files = pyspedas.psp.spi(trange, datatype='spi_sf00_8dx32ex8a', level='l2', notplot=True, time_clip=True, downloadonly=True, last_version=True)
 
-        dat_raw = cdflib.cdf_to_xarray(*files)
+        try: dat_raw = cdflib.cdf_to_xarray(*files)
+        except: dat_raw = cdflib.xarray.cdf_to_xarray(*files)
+
         dat = {}
 
         # creating the data slice (1 day max)

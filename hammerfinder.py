@@ -206,7 +206,9 @@ if __name__=='__main__':
                     day_filter_dict[hammer_epoch]['hardham_flag'] = False
 
         # writing the pkl file
-        date_str = re.split('[ ]', str(epoch[0]))[0]
+        try: date_str = re.split('[ ]', str(epoch[0]))[0]
+        except: date_str = re.split('[T]', str(epoch[0]))[0]
+        
         write_pickle(day_filter_dict, f'hamstring_{date_str}')
 
         # plot_tools.plot_temperature_anisotropy(day_filter_dict, span_data, day_idx)
