@@ -23,8 +23,10 @@ def read_pickle(fname):
 
 if __name__=='__main__':
     # used defined start and end times in YYYY-MM-DD/hh:mm:ss format
-    tstart = '2024-12-23/00:00:00'
-    tend   = '2024-12-23/23:59:59'
+    # tstart = '2024-12-23/00:00:00'
+    # tend   = '2024-12-23/23:59:59'
+    tstart = '2023-03-13/05:30:00'
+    tend   = '2023-03-15/07:30:00'
 
     # setting up the data loading process [processing will happen one day at a time]
     span_data = load_data.span(tstart, tend)

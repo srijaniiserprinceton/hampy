@@ -534,8 +534,10 @@ def call_hamplotter(tstart, tend, og_only_flag, mincount=0, dir='.'):
 
 
 if __name__=='__main__':
-    tstart = '2024-07-01/16:30:00'
-    tend   = '2024-07-01/17:20:00'
+    # tstart = '2024-07-01/16:30:00'
+    # tend   = '2024-07-01/17:20:00'
+    tstart = '2020-01-29/21:00:00'
+    tend   = '2020-01-29/21:20:00'
 
     og_only_flag = False
 
