@@ -21,13 +21,7 @@ def read_pickle(fname):
         x = pickle.load(handle)
     return x
 
-if __name__=='__main__':
-    # used defined start and end times in YYYY-MM-DD/hh:mm:ss format
-    # tstart = '2024-12-23/00:00:00'
-    # tend   = '2024-12-23/23:59:59'
-    tstart = '2023-03-13/05:30:00'
-    tend   = '2023-03-15/07:30:00'
-
+def main(tstart, tend):
     # setting up the data loading process [processing will happen one day at a time]
     span_data = load_data.span(tstart, tend)
 
@@ -104,7 +98,6 @@ if __name__=='__main__':
 
             # detecting soft hammerhead
             hammerline_sm, hammerflag, peak_idx, isedgecase, intdip_idx = f.softham_finder(pixsum)
-            # hammerflag, peak_idx, isedgecase, intdip_idx = f.softham_finder(pixsum)
 
             # carrying out hard hammerhead tests if it detects a soft hammerhead
             if(bool(hammerflag + isedgecase)):
@@ -199,11 +192,6 @@ if __name__=='__main__':
                         plt.savefig(f'HammerFigs/day_{day_idx}_time_{time_idx}.png')
                         plt.close()
                         '''
-                        
-                            
-                            
-                            
-                        
 
                 if(convmat.Ngaps_1D == 0 and convmat.Ngaps_2D == 0):
                     day_filter_dict[hammer_epoch]['hardham_flag'] = False
@@ -214,8 +202,12 @@ if __name__=='__main__':
 
         write_pickle(day_filter_dict, f'hamstring_{date_str}')
 
-        # plot_tools.plot_temperature_anisotropy(day_filter_dict, span_data, day_idx)
-        # plot_tools.compare_density(day_filter_dict, span_data, day_idx)
-        # plot_tools.plot_Tani_2d_hist(day_filter_dict, span_data, day_idx)
+if __name__=='__main__':
+    # used defined start and end times in YYYY-MM-DD/hh:mm:ss format
+    tstart_arr = ['2023-03-13/05:30:00']
+    tend_arr = ['2023-03-13/07:30:00']
+
+    for window_idx in range(len(tstart_arr)):
+        main(tstart_arr[window_idx], tend_arr[window_idx])
 
 
