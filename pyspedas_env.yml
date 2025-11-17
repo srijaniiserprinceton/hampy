@@ -8,7 +8,7 @@ dependencies:
   - python==3.11.5
   - numpy==1.26.2
   - requests==2.31.0
-  - cdflib=0.4.9
+  - cdflib==0.4.9
   - cdasws==1.7.43
   - netCDF4==1.6.2
   - pywavelets==1.4.1
@@ -21,6 +21,7 @@ dependencies:
   - scikit-image==0.23.2
   - jupyter
   - pip:
+    - matlabengine==24.2.1
     - wget==3.2
     - pytplot-mpl-temp>=2.2.1
     - geopack>=1.0.10
@@ -30,3 +31,4 @@ dependencies:
     - spherepy==0.0.9
     - tqdm==4.66.5
     - jax==0.4.34
+    - pyspedas
