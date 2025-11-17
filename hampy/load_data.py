@@ -48,8 +48,6 @@ class span:
         for i in range(delta.days + 1):
             self.day_arr = np.append(self.day_arr, self.tstart + timedelta(days=i))
 
-        print(self.day_arr)
-
     def get_VDFdict_at_day(self, cdf_VDfile):
         epochSlice  = cdf_VDfile['EPOCH'][self.tidx_start: self.tidx_end]
         thetaSlice  = cdf_VDfile['THETA'][self.tidx_start: self.tidx_end,:]
