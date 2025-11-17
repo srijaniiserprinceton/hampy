@@ -208,8 +208,8 @@ def main(tstart, tend, save_daywise_pkl=False):
 
 if __name__=='__main__':
     # used defined start and end times in YYYY-MM-DD/hh:mm:ss format
-    tstart_arr = ['2020-01-29/18:00:00']
-    tend_arr = ['2020-01-29/20:00:00']
+    tstart_arr = ['2020-01-25/00:00:00']
+    tend_arr = ['2020-02-05/23:59:59']
 
     for window_idx in range(len(tstart_arr)):
         global_day_filter_dict = main(tstart_arr[window_idx], tend_arr[window_idx])
@@ -226,5 +226,3 @@ if __name__=='__main__':
         # saving this as the grand .pkl file for a specific period
         composed_filename = f'{tstart_arr[window_idx].replace("/","T")}-{tend_arr[window_idx].replace("/","T")}'
         write_pickle(global_day_filter_dict, f'hamstring_{composed_filename}')
-
-
