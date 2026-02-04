@@ -190,7 +190,7 @@ class span:
         yyyy, mm, dd = f'{user_datetime.year:04d}', f'{user_datetime.month:02d}', f'{user_datetime.day:02d}'
         yyyymmdd = yyyy+mm+dd
         filepath = cwd + f'/psp_data/sweap/spi/l3/spi_sf00_l3_mom/{yyyy}/' +\
-                         f'psp_swp_spi_sf00_l3_8Dx32Ex8A_{yyyymmdd}_v04.cdf'
+                         f'psp_swp_spi_sf00_l3_mom_{yyyymmdd}_v04.cdf'
 
         if Path(filepath).exists():
             spi_vars = [filepath]
