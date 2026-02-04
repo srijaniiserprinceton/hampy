@@ -1,5 +1,6 @@
 import numpy as np
 import pyspedas, pytplot, re, os, cdflib, bisect, wget
+from pathlib import Path
 from datetime import date, timedelta, datetime
 
 def read_credentials():
@@ -149,12 +150,24 @@ class span:
         tstart = f'{user_datetime.year:04d}-{user_datetime.month:02d}-{user_datetime.day:02d}/00:00:00'
         tend = f'{user_datetime.year:04d}-{user_datetime.month:02d}-{user_datetime.day:02d}/23:59:59'
         trange = [tstart, tend]
+       
+        cwd = os.getcwd()
+        yyyy, mm, dd = f'{user_datetime.year:04d}', f'{user_datetime.month:02d}', f'{user_datetime.day:02d}'
+        yyyymmdd = yyyy+mm+dd
+        filepath = cwd + f'/psp_data/sweap/spi/L2/spi_sf00/{yyyy}/{mm}/' +\
+                         f'psp_swp_spi_sf00_L2_8Dx32Ex8A_{yyyymmdd}_v04.cdf'
+
+        if Path(filepath).exists():
+            files = [filepath] #cdflib.CDF(filepath)
+            print('Using NON-Pyspedas loading')
         
-        if CREDENTIALS:
-            files = pyspedas.psp.spi(trange, datatype='spi_sf00', level='L2', notplot=True, time_clip=True,
-                    downloadonly=True, last_version=True, username=CREDENTIALS[0], password=CREDENTIALS[1])
         else:
-            files = pyspedas.psp.spi(trange, datatype='spi_sf00_8dx32ex8a', level='l2', notplot=True, time_clip=True, downloadonly=True, last_version=True)
+            if CREDENTIALS:
+                files = pyspedas.psp.spi(trange, datatype='spi_sf00', level='L2', notplot=True, time_clip=True,
+                        downloadonly=True, last_version=True, username=CREDENTIALS[0], password=CREDENTIALS[1])
+            else:
+                files = pyspedas.psp.spi(trange, datatype='spi_sf00_8dx32ex8a', level='l2', notplot=True, time_clip=True, downloadonly=True, last_version=True)
+            print('Using Pyspedas loading')
 
         dat_raw = cdflib.CDF(files[0])
         dat = {}
@@ -172,18 +185,32 @@ class span:
     def download_L3_data(self, user_datetime, CREDENTIALS=None):
         yyyy, mm, dd = user_datetime.year, user_datetime.month, user_datetime.day
 
-        trange = [f'{yyyy}-{mm}-{dd}/00:00:00', f'{yyyy}-{mm}-{dd}/23:59:59']
-        try:
-            spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00_l3_mom', level='l3',
-                                        time_clip=True, get_support_data= True, varnames=['*'],
-                                        notplot=True, downloadonly=True)
-            dat = cdflib.CDF(spi_vars[0])
-        except:
-            spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00', level='L3',
-                                        time_clip=True, get_support_data= True, varnames=['*'],
-                                        notplot=True, downloadonly=True, username=CREDENTIALS[0],
-                                        password=CREDENTIALS[1])
-            dat = cdflib.CDF(spi_vars[0])
+        # creating the filepath
+        cwd = os.getcwd()
+        yyyy, mm, dd = f'{user_datetime.year:04d}', f'{user_datetime.month:02d}', f'{user_datetime.day:02d}'
+        yyyymmdd = yyyy+mm+dd
+        filepath = cwd + f'/psp_data/sweap/spi/l3/spi_sf00_l3_mom/{yyyy}/' +\
+                         f'psp_swp_spi_sf00_l3_8Dx32Ex8A_{yyyymmdd}_v04.cdf'
+
+        if Path(filepath).exists():
+            spi_vars = [filepath]
+            print('Using NON-Pyspedas loading')
+
+        else:
+            trange = [f'{yyyy}-{mm}-{dd}/00:00:00', f'{yyyy}-{mm}-{dd}/23:59:59']
+            try:
+                spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00_l3_mom', level='l3',
+                                            time_clip=True, get_support_data= True, varnames=['*'],
+                                            notplot=True, downloadonly=True)
+            except:
+                spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00', level='L3',
+                                            time_clip=True, get_support_data= True, varnames=['*'],
+                                            notplot=True, downloadonly=True, username=CREDENTIALS[0],
+                                            password=CREDENTIALS[1])
+            
+            print('Using Pyspedas loading')
+
+        dat = cdflib.CDF(spi_vars[0])
 
         return dat
 
