@@ -192,9 +192,16 @@ class span:
         filepath = cwd + f'/psp_data/sweap/spi/l3/spi_sf00_l3_mom/{yyyy}/' +\
                          f'psp_swp_spi_sf00_l3_mom_{yyyymmdd}_v04.cdf'
 
+        filepath00 = cwd + f'/psp_data/sweap/spi/l3/spi_sf00_l3_mom/{yyyy}/' +\
+                         f'psp_swp_spi_sf00_l3_mom_{yyyymmdd}_v00.cdf'
+
         if Path(filepath).exists():
             spi_vars = [filepath]
             print('Using NON-Pyspedas loading')
+
+        elif Path(filepath00).exists():
+            spi_vars = [filepath00]
+            print('Using NON-Pyspedas loading for version 00')
 
         else:
             trange = [f'{yyyy}-{mm}-{dd}/00:00:00', f'{yyyy}-{mm}-{dd}/23:59:59']
