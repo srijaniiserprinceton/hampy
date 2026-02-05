@@ -212,7 +212,7 @@ if __name__=='__main__':
     tend_arr = ['2020-01-30/23:59:59']
 
     for window_idx in range(len(tstart_arr)):
-        global_day_filter_dict = main(tstart_arr[window_idx], tend_arr[window_idx])
+        global_day_filter_dict = main(tstart_arr[window_idx], tend_arr[window_idx], save_daywise_pkl=True)
 
         # removing the epochs which have no hammerhead splitting 
         purge_keys = []
