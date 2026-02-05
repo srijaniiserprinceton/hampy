@@ -197,8 +197,8 @@ def main(tstart, tend, save_daywise_pkl=False):
                     day_filter_dict[hammer_epoch]['hardham_flag'] = False
 
         # writing the pkl file
-        try: date_str = re.split('[ ]', str(epoch[0]))[0]
-        except: date_str = re.split('[T]', str(epoch[0]))[0]
+        try: date_str = re.split('[T]', str(epoch[0]))[0]
+        except: date_str = re.split('[ ]', str(epoch[0]))[0]
         if(save_daywise_pkl):
             write_pickle(day_filter_dict, f'hamstring_{date_str}')
 
