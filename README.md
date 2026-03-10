@@ -1,3 +1,4 @@
+[![DOI](https://zenodo.org/badge/873248455.svg)](https://doi.org/10.5281/zenodo.18943446)
 ## Installation
 To get `hampy`, simply git clone this repository in your terminal using the command
 ```
