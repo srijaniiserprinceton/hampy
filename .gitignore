@@ -13,3 +13,4 @@ spice_data
 *.fts.gz
 *.png
 .credentials
+batch_create_hamstring_cdfs.py

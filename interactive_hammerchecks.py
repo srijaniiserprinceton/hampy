@@ -21,8 +21,8 @@ NAX = np.newaxis
 
 if __name__=='__main__':
     # user defined date and time
-    year, month, date = 2023, 3, 13
-    hour, minute, second = 7, 15, 00
+    year, month, date = 2022, 9, 6
+    hour, minute, second = 18, 45, 00
 
     # timestamp for Verniero et al 2022 hammerhead
     # year, month, date = 2020, 1, 29
@@ -193,8 +193,8 @@ if __name__=='__main__':
     # Define an axes area and draw a slider in it
     axis_color = 'white'
     time_slider_ax  = fig.add_axes([0.4, 0.12, 0.2, 0.03], facecolor=axis_color)
-    time_slider = Slider(time_slider_ax, r'$\mu_{\phi}$', 0, len(epoch), valinit=tSliceIndex)
-    # time_slider = Slider(time_slider_ax, r'$\mu_{\phi}$', tSliceIndex-100, tSliceIndex+100, valinit=tSliceIndex)
+    # time_slider = Slider(time_slider_ax, r'$\mu_{\phi}$', 0, len(epoch), valinit=tSliceIndex)
+    time_slider = Slider(time_slider_ax, r'$\mu_{\phi}$', tSliceIndex-100, tSliceIndex+100, valinit=tSliceIndex)
 
     # Define an action for modifying the line when any slider's value changes
     def sliders_on_changed(val):

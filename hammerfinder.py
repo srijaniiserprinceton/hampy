@@ -162,7 +162,7 @@ def main(tstart, tend, save_daywise_pkl=False):
                             hamcounter += 1
                             print(f'# OG Hammerhead detected: {hamcounter}')
 
-                        '''
+                        
                         # plotting and saving
                         fig, ax = plt.subplots(1,1)
                         vmin, vmax = -1, 8
@@ -189,9 +189,9 @@ def main(tstart, tend, save_daywise_pkl=False):
                         time_str = re.split('[.]', str(epoch[int(time_idx)]))[0]
                         ax.set_title(f'{time_str} | OG Flag = {og_flag}')
 
-                        plt.savefig(f'HammerFigs/day_{day_idx}_time_{time_idx}.png')
+                        plt.savefig(f'HammerFigs/{time_str}.png')
                         plt.close()
-                        '''
+                        
 
                 if(convmat.Ngaps_1D == 0 and convmat.Ngaps_2D == 0):
                     day_filter_dict[hammer_epoch]['hardham_flag'] = False
@@ -208,8 +208,10 @@ def main(tstart, tend, save_daywise_pkl=False):
 
 if __name__=='__main__':
     # used defined start and end times in YYYY-MM-DD/hh:mm:ss format
-    tstart_arr = ['2020-01-30/00:00:00']
-    tend_arr = ['2020-01-30/23:59:59']
+    # tstart_arr = ['2020-01-30/00:00:00']
+    # tend_arr = ['2020-01-30/23:59:59']
+    tstart_arr = ['2022-09-06/18:30:00']
+    tend_arr = ['2022-09-06/19:59:59']
 
     for window_idx in range(len(tstart_arr)):
         global_day_filter_dict = main(tstart_arr[window_idx], tend_arr[window_idx], save_daywise_pkl=True)
