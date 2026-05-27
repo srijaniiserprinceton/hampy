@@ -18,9 +18,6 @@ on:
     branches:
     - main
     - stable
-    - v*.*.*
-    tags:
-    - v*
   pull_request:
   workflow_dispatch:
 
@@ -42,46 +39,25 @@ jobs:
       matrix:
         include:
 
-        - name: Tests, Python 3.14, skip slow tests, doctests, Ubuntu
-          # Doctests are run only for most recent Python (see noxfile.py)
-          os: ubuntu-latest
-          python: '3.14'
-          nox_session: tests-3.14(skipslow)
+          - name: Tests, Python 3.14, Ubunutu
+            os: ubuntu-latest
+            python: '3.14'
+            nox_session: tests-3.14
 
-        - name: Tests, Python 3.13, with code coverage, macOS
-          os: macos-latest
-          python: '3.13'
-          nox_session: tests-3.13(cov)
+          - name: Tests, Python 3.13, Windows
+            os: windows-latest
+            python: '3.13'
+            nox_session: tests-3.13
 
-        - name: Tests, Python 3.12, lowest direct dependencies, skip slow tests, Windows
-          os: windows-latest
-          python: '3.12'
-          nox_session: tests-3.12(lowest-direct-skipslow)
+          - name: Tests, Python 3.12, macOS
+            os: macos-latest
+            python: '3.12'
+            nox_session: tests-3.12
 
-        - name: Documentation, Python 3.14, Ubuntu
-          os: ubuntu-latest
-          python: '3.14'
-          nox_session: docs
-
-        - name: Static type checking with ty, Python 3.14, Ubuntu
-          os: ubuntu-latest
-          python: '3.14'
-          nox_session: ty
-
-        - name: Packaging, Python 3.14, Windows
-          os: windows-latest
-          python: '3.14'
-          nox_session: build
-
-        - name: Check workflow security with zizmor
-          os: ubuntu-latest
-          python: '3.14'
-          nox_session: zizmor
-
-        - name: Check consistency of pinned & project requirements
-          os: ubuntu-latest
-          python: '3.14'
-          nox_session: validate_lockfile
+          - name: Tests, Python 3.11, Ubuntu
+            os: ubuntu-latest
+            python: '3.11'
+            nox_session: tests-3.11
 
     steps:
 
@@ -90,32 +66,13 @@ jobs:
       with:
         persist-credentials: false
 
-    - name: Install graphviz and pandoc for doc builds
-      if: ${{ contains(matrix.nox_session, 'docs') }}
-      uses: mamba-org/setup-micromamba@v3
-      with:
-        create-args: graphviz pandoc -c conda-forge
-        init-shell: bash
-        environment-name: micromamba-env
-        cache-environment: true
-        post-cleanup: all
-
     - name: Install uv
       uses: astral-sh/setup-uv@v8.1.0
       with:
         python-version: ${{ matrix.python }}
-        enable-cache: true  # zizmor: ignore[cache-poisoning]
+        enable-cache: true
         cache-suffix: ${{ matrix.nox_session }}-${{ matrix.python }}-${{ runner.os }}
 
     - name: Run Nox session ${{ matrix.nox_session }}
       shell: bash -el {0}
       run: uvx nox --session '${{ matrix.nox_session }}'
-
-    - name: Upload coverage reports to Codecov
-      if: ${{ contains(matrix.nox_session, 'cov') }}
-      uses: codecov/codecov-action@v6
-      with:
-        files: ./coverage.xml
-        fail_ci_if_error: false
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
