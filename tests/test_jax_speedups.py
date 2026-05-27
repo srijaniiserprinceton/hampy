@@ -4,7 +4,8 @@ import jax
 from hampy import jax_functions as jf
 from hampy import nonjax_functions as f
 
-if __name__=='__main__':
+
+def test_main():
     a = np.random.rand(32)
     b = np.random.rand(8)
     a_ = jnp.arange(32)
@@ -23,3 +24,7 @@ if __name__=='__main__':
     jfconv2d_jit = jax.jit(jf.convolve2d_w_vdf)
     # run to compile
     jfconv2d_jit(a2d_,b2d_)
+
+
+if __name__=='__main__':
+    test_main()

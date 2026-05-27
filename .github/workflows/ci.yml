@@ -1,0 +1,78 @@
+# Define continuous integration checks to be run for all pull requests.
+#
+# These checks include running tests for different versions of Python,
+# building the documentation, and performing static type checking.
+#
+# The checks are defined in `noxfile.py`. After installing uv, the
+# checks can be run locally in the top-level directory with
+#
+#    uvx nox -s '<nox_session>'
+#
+# where <nox_session> is replaced by the name of the session. Quotes are
+# necessary around <nox_session> when it contains parentheses.
+
+name: CI
+
+on:
+  push:
+    branches:
+    - main
+    - stable
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}  # disable all GitHub permissions for the workflow
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+
+  tests:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        include:
+
+          - name: Tests, Python 3.14, Ubunutu
+            os: ubuntu-latest
+            python: '3.14'
+            nox_session: tests-3.14
+
+          - name: Tests, Python 3.13, Windows
+            os: windows-latest
+            python: '3.13'
+            nox_session: tests-3.13
+
+          - name: Tests, Python 3.12, macOS
+            os: macos-latest
+            python: '3.12'
+            nox_session: tests-3.12
+
+          - name: Tests, Python 3.11, Ubuntu
+            os: ubuntu-latest
+            python: '3.11'
+            nox_session: tests-3.11
+
+    steps:
+
+    - name: Checkout code
+      uses: actions/checkout@v6
+      with:
+        persist-credentials: false
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v8.1.0
+      with:
+        python-version: ${{ matrix.python }}
+        enable-cache: true
+        cache-suffix: ${{ matrix.nox_session }}-${{ matrix.python }}-${{ runner.os }}
+
+    - name: Run Nox session ${{ matrix.nox_session }}
+      shell: bash -el {0}
+      run: uvx nox --session '${{ matrix.nox_session }}'
