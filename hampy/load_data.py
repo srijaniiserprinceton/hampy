@@ -2,6 +2,8 @@ import numpy as np
 import pyspedas, pytplot, re, os, cdflib, bisect, wget
 from pathlib import Path
 from datetime import date, timedelta, datetime
+import pyspedas.psp.config as cfg
+cfg.CONFIG['sweap_remote_data_dir'] = 'https://w3sweap.cfa.harvard.edu/data/sci/'
 
 def read_credentials():
     package_dir = os.getcwd()  # os.path.dirname(current_dir)
@@ -162,11 +164,19 @@ class span:
             print('Using NON-Pyspedas loading')
         
         else:
+            '''
             if CREDENTIALS:
                 files = pyspedas.psp.spi(trange, datatype='spi_sf00', level='L2', notplot=True, time_clip=True,
                         downloadonly=True, last_version=True, username=CREDENTIALS[0], password=CREDENTIALS[1])
             else:
                 files = pyspedas.psp.spi(trange, datatype='spi_sf00_8dx32ex8a', level='l2', notplot=True, time_clip=True, downloadonly=True, last_version=True)
+            '''
+            if CREDENTIALS is None:
+                print('No credentials provided. Using Pyspedas loading without authentication.')
+                files = pyspedas.psp.spi(trange, datatype='spi_sf00_8dx32ex8a', level='l2', notplot=True, time_clip=True, downloadonly=True, last_version=True, get_support_data=True)
+            else:
+                print('Credentials provided. Using Pyspedas loading with authentication.')
+                files = pyspedas.psp.spi(trange, datatype='spi_sf00', level='L2', notplot=True, time_clip=True, downloadonly=True, last_version=True, get_support_data=True, username=CREDENTIALS[0], password=CREDENTIALS[1])            
             print('Using Pyspedas loading')
 
         dat_raw = cdflib.CDF(files[0])
@@ -186,13 +196,13 @@ class span:
         yyyy, mm, dd = user_datetime.year, user_datetime.month, user_datetime.day
 
         # creating the filepath
-        cwd = os.getcwd()
+        psp_data_dir = os.environ.get('PSP_DATA_DIR')
         yyyy, mm, dd = f'{user_datetime.year:04d}', f'{user_datetime.month:02d}', f'{user_datetime.day:02d}'
         yyyymmdd = yyyy+mm+dd
-        filepath = cwd + f'/psp_data/sweap/spi/l3/spi_sf00_l3_mom/{yyyy}/' +\
+        filepath = psp_data_dir + f'/sweap/spi/l3/spi_sf00_l3_mom/{yyyy}/' +\
                          f'psp_swp_spi_sf00_l3_mom_{yyyymmdd}_v04.cdf'
 
-        filepath00 = cwd + f'/psp_data/sweap/spi/l3/spi_sf00_l3_mom/{yyyy}/' +\
+        filepath00 = psp_data_dir + f'/sweap/spi/l3/spi_sf00_l3_mom/{yyyy}/' +\
                          f'psp_swp_spi_sf00_l3_mom_{yyyymmdd}_v00.cdf'
 
         if Path(filepath).exists():
@@ -206,10 +216,12 @@ class span:
         else:
             trange = [f'{yyyy}-{mm}-{dd}/00:00:00', f'{yyyy}-{mm}-{dd}/23:59:59']
             try:
+                print('No credentials provided. Using Pyspedas loading without authentication.')
                 spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00_l3_mom', level='l3',
                                             time_clip=True, get_support_data= True, varnames=['*'],
                                             notplot=True, downloadonly=True)
             except:
+                print('Credentials provided. Using Pyspedas loading with authentication.')
                 spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00', level='L3',
                                             time_clip=True, get_support_data= True, varnames=['*'],
                                             notplot=True, downloadonly=True, username=CREDENTIALS[0],
