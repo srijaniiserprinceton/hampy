@@ -60,27 +60,28 @@ def download_L3_data(user_datetime):
         try:
             spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00_l3_mom', level='l3',
                                         time_clip=True, get_support_data= True, varnames=['*'],
-                                        notplot=True, downloadonly=True) #, no_update=True)
-            dat = cdflib.CDF(spi_vars[0])
+                                        notplot=True, downloadonly=True, no_update=True)
+            dat = cdflib.CDF(spi_vars[-1])
         except:
             spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00', level='L3',
                                         time_clip=True, get_support_data= True, varnames=['*'],
                                         notplot=True, downloadonly=True, username=CREDENTIALS[0],
-                                        password=CREDENTIALS[1]) #, no_update=True)
-            dat = cdflib.CDF(spi_vars[0])
+                                        password=CREDENTIALS[1], no_update=True)
+            dat = cdflib.CDF(spi_vars[-1])
+            
     # if local L3 file does not exist
     except:
         try:
             spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00_l3_mom', level='l3',
                                         time_clip=True, get_support_data= True, varnames=['*'],
                                         notplot=True, downloadonly=True)
-            dat = cdflib.CDF(spi_vars[0])
+            dat = cdflib.CDF(spi_vars[-1])
         except:
             spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00', level='L3',
                                         time_clip=True, get_support_data= True, varnames=['*'],
                                         notplot=True, downloadonly=True, username=CREDENTIALS[0],
                                         password=CREDENTIALS[1])
-            dat = cdflib.CDF(spi_vars[0])
+            dat = cdflib.CDF(spi_vars[-1])
 
     return dat
 
