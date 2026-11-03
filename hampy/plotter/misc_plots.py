@@ -1,7 +1,9 @@
 import numpy as np
-import matplotlib.pyplot as plt; plt.style.use('dark_background')
+import pandas as pd
+import astropy.units as u
+import matplotlib.pyplot as plt; plt.ion()
 from matplotlib.colors import Normalize
-import cdflib, pickle, re, os
+import cdflib, pickle, re, os, pyspedas, xarray
 from datetime import datetime, timedelta
 from scipy.interpolate import griddata
 import astropy.constants as c
@@ -10,8 +12,20 @@ from scipy.stats.stats import pearsonr
 from hampy import misc_functions as misc_fn
 from hampy import load_data
 from hampy import orbit_trajectory
+from hampy import encounters
 
 plt.rcParams.update({'font.size': 16})
+
+def find_enc_from_trange(trange):
+    perihelion_dates = []
+    for enc in range(1, 27):
+        if(enc < 10): enc_str = f'E0{enc}'
+        else: enc_str = f'E{enc}'
+        perihelion_dates.append(encounters.get_enc_dates(enc_str))
+    perihelion_dates = np.sort(np.array(perihelion_dates))
+
+    enc_idx = np.argmin(np.abs(perihelion_dates - np.array(trange).astype('datetime64[D]')[0]))
+    return enc_idx + 1
 
 def read_pickle(fname):
     with open(f'{fname}.pkl', 'rb') as handle:
@@ -532,6 +546,156 @@ def call_hamplotter(tstart, tend, og_only_flag, mincount=0, dir='.'):
 
     return global_prop_dict
 
+def plot_hamogram_trange(trange, hammertimes, FOV_dict=None, tbin_in_sec=100):
+    # downloading the L3 data
+    files = pyspedas.psp.spi(trange, datatype='spi_sf00_l3_mom', level='l3', notplot=True, time_clip=True, downloadonly=True, last_version=True)
+
+    # Check if there are multiple datasets loaded for the interval.
+    if len(files) > 1:
+        L3_data = xarray.concat([cdflib.cdf_to_xarray(f).drop_vars(['ROTMAT_SC_INST']) for f in files], dim='Epoch')
+    else:
+        L3_data = cdflib.cdf_to_xarray(*files)
+    xr_time_object = cdflib.epochs_astropy.CDFAstropy.convert_to_astropy(L3_data.Epoch.data)
+    xr_time_array = xr_time_object.utc.datetime 
+    L3_data['Epoch'] = xr_time_array
+    L3_data = L3_data.sel(Epoch=slice(trange[0], trange[-1]))
+
+    # binning the hammerheads according to tbin_in_sec
+    hammertimes = [pd.Timestamp(ht).tz_localize("UTC") for ht in hammertimes]
+    hammertimes_sec = np.array([ht.timestamp() for ht in hammertimes])
+    # hammertimes_sec = np.array([hammertime.timestamp() for hammertime in hammertimes])
+    hammertimes_bins = np.arange(hammertimes_sec[0], hammertimes_sec[-1] + tbin_in_sec, tbin_in_sec)
+
+    # binning the SPAN measurements instead of hammertimes
+    L3_times_dt = pd.to_datetime(L3_data.Epoch, unit='s', utc=True).to_pydatetime()
+    L3_times = np.array([pd.Timestamp(dt) for dt in L3_times_dt])
+    clip_mask = (np.array(L3_times) >= np.array(hammertimes[0])) & (np.array(L3_times) <= np.array(hammertimes[-1]))
+    L3_times = L3_times[clip_mask]
+    L3_times_sec = np.array([ht.timestamp() for ht in L3_times])
+    L3_times_bins = np.arange(L3_times_sec[0], L3_times_sec[-1] + tbin_in_sec, tbin_in_sec)
+
+    # making the hamogram with context parameter in the desired trange (Br, rho, ...)
+    # bincounts_ham, final_bin_edges_ham = np.histogram(hammertimes_sec, bins=hammertimes_bins)
+    bincounts_ham, final_bin_edges_ham = np.histogram(hammertimes_sec, bins=L3_times_bins)
+    bincounts, final_bin_edges = np.histogram(L3_times_sec, bins=L3_times_bins)
+    bin_cens = (final_bin_edges[1:] + final_bin_edges[:-1]) / 2
+
+    # finding bin edges in datetime.datetime
+    final_bin_edges_dt = pd.to_datetime(final_bin_edges, unit='s', utc=True) #np.array([datetime.fromtimestamp(t) for t in final_bin_edges])
+    # finding the bin centers
+    bin_cens_dt =  pd.to_datetime(bin_cens, unit='s', utc=True) #np.array([datetime.fromtimestamp(t) for t in bin_cens])
+
+    # extracting the context parameters to be plotted
+    B = L3_data.MAGF_SC.data
+    rho = L3_data.DENS.data
+
+    if(FOV_dict is None):
+        print("FOV_dict is None. Skipping FOV subplot.")
+
+        # making the plot
+        fig, ax = plt.subplots(1, 1, figsize=(15, 8), sharex=True)
+
+        distRsun = (L3_data['SUN_DIST'].data * u.km).to(u.R_sun)
+        Rsq = distRsun ** 2
+        ax.plot(L3_data['Epoch'].data, -B[:,1], color='green', lw=1, alpha=0.3, label='BN')
+        ax.plot(L3_data['Epoch'].data, B[:,0], color='red', lw=1, alpha=0.3, label='BT')
+        ax.plot(L3_data['Epoch'].data, -B[:,2], color='black', lw=1, alpha=0.8, label='BR')
+        ax.axhline(0, color='grey')
+        ax.legend()
+
+        # hammogram on B
+        axt = ax.twinx()
+        axt.hist(bin_cens_dt, bins=final_bin_edges_dt, weights=bincounts_ham/bincounts, color='blue', alpha=0.6, lw=2)
+        ax.set_ylabel('BRTN [nT]')
+        ax.grid(True)
+        ax.set_xlim([final_bin_edges_dt[0], final_bin_edges_dt[-1]])
+
+    else:
+        # in order to use the FOV dictonary, we need to know which encounter we are in
+        enc = find_enc_from_trange(trange)
+
+        total_counts = bincounts          # shape (nbins,)
+        nbins = total_counts.size
+        ncats = 8
+
+        # now using the FOV information [using all times for FOV plot]
+        span_dt = [pd.Timestamp(ht).tz_localize("UTC") for ht in FOV_dict[enc]['dt']]
+        span_dt64 = np.array(span_dt, dtype='datetime64[ns]')
+        bin_edges = np.array(final_bin_edges_dt, dtype='datetime64[ns]')
+        anode_idx = np.array(FOV_dict[enc]['VDF_phimaxidx_t'])
+
+        # 1) Clip to the time range covered by your bins
+        mask_time = (span_dt64 >= bin_edges[0]) & (span_dt64 < bin_edges[-1]) & (span_dt64 >= np.datetime64(trange[0])) & (span_dt64 <= np.datetime64(trange[-1]))
+        hammer_dt_clip = span_dt64[mask_time]
+        anode_idx_clip = anode_idx[mask_time]
+
+        # 2) Which time bin each event goes into (same edges as used for bincounts)
+        bin_index = np.searchsorted(bin_edges, hammer_dt_clip, side='right') - 1
+
+        # 3) Only keep “good” anode indices (0..7)
+        mask_good = (bin_index >= 0) & (bin_index < nbins) & (anode_idx_clip >= 0) & (anode_idx_clip < ncats)
+        bin_index = bin_index[mask_good]
+        anode_idx_good = anode_idx_clip[mask_good]
+
+        # 4) Build category_counts[bin, cat]
+        category_counts = np.zeros((nbins, ncats), dtype=int)
+        np.add.at(category_counts, (bin_index, anode_idx_good), 1)
+
+        # Debug check
+        print("Sum category counts:", category_counts.sum(axis=1)[:10])
+        print("Total hammerheads:   ", total_counts[:10])
+
+
+        # making the plot
+        fig, ax = plt.subplots(2, 1, figsize=(15, 8), sharex=True)
+
+        distRsun = (L3_data['SUN_DIST'].data * u.km).to(u.R_sun)
+        Rsq = distRsun ** 2
+        ax[0].plot(L3_data['Epoch'].data, -B[:,1], color='green', lw=1, alpha=0.3, label='BN')
+        ax[0].plot(L3_data['Epoch'].data, B[:,0], color='red', lw=1, alpha=0.3, label='BT')
+        ax[0].plot(L3_data['Epoch'].data, -B[:,2], color='black', lw=1, alpha=0.8, label='BR')
+        ax[0].axhline(0, color='grey')
+        ax[0].legend()
+        # ax[2].plot(L3_data['Epoch'].data, rho, color='blue')
+        print(bincounts_ham.shape, bincounts.shape)
+        ax[1].hist(bin_cens_dt, bins=final_bin_edges_dt, weights=bincounts_ham/bincounts, color='k', alpha=1.0, histtype='step', lw=3)
+        ymin, ymax = ax[1].get_ylim()
+        yrange = ymax - ymin
+        plot_stacked_bars(ax[1], bin_edges, bincounts, category_counts, yrange)
+
+        # hammogram on B
+        axt = ax[0].twinx()
+        # axt.hist(bin_cens_dt, bins=final_bin_edges_dt, weights=bincounts_ham/bincounts, color='blue', histtype='step', alpha=1.0, lw=2)
+        axt.hist(bin_cens_dt, bins=final_bin_edges_dt, weights=bincounts_ham/bincounts, color='blue', alpha=0.6, lw=2)
+
+        ax[0].set_ylabel('BRTN [nT]')
+        # ax[2].set_ylabel('n-spi [cc]')
+        ax[1].set_ylabel('Hammogram')
+        [axs.grid(True) for axs in ax]
+
+        ax[0].set_xlim([final_bin_edges_dt[0], final_bin_edges_dt[-1]])
+
+        # Define custom tick locations (e.g., every 20th value) and set them
+        current_ticks_float = ax[-1].get_xticks()
+        custom_ticks_datetime = current_ticks_float[::10]
+        ax[-1].set_xticks(custom_ticks_datetime)
+
+        # # Format the labels (e.g., to show only Hour:Minute) and set them
+        # labels = [i.strftime("%H:%M") for i in ticks_to_use]
+        # ax.set_xticklabels(labels)
+
+        # ax[0].set_xlim([np.datetime64(trange[0]), np.datetime64(trange[-1])])
+        ax[1].text(0.01, 0.93, f'Time bin={tbin_in_sec} [s]', transform=ax[1].transAxes,
+                        fontsize=12, color='black', ha='left', va='top', fontweight='bold')
+
+        plt.subplots_adjust(left=0.08, right=0.95, bottom=0.15, top=0.98)
+
+        # # saving the hammerhead count plotting information
+        # hammogram_dict = {}
+        # hammogram_dict['bin_cens_dt'] = bin_cens_dt
+        # hammogram_dict['bin_edges_dt'] = final_bin_edges_dt
+        # hammogram_dict['bincounts'] = bincounts
+        # write_pickle(hammogram_dict, f'hammogram_{trange[0]}-{trange[1]}')
 
 if __name__=='__main__':
     # tstart = '2024-07-01/16:30:00'

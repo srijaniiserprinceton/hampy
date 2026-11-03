@@ -1,5 +1,5 @@
 import numpy as np
-import cdflib
+import cdflib, os, re
 import astropy.constants as c
 from scipy.signal import savgol_filter
 
@@ -226,3 +226,20 @@ def extract_params(hammerdict, span_data, og_only=True, min_hammer_cells=10):
 
     return core_density, neck_density, hammer_density, total_hampy_density, span_density, T_perp, T_parallel, T_ani,\
            dt_arr, B_vec_inst, neck_vdrift, hammer_vdrift, span_Bmag, U, dist_rsun, span_density_all, span_time_all
+
+
+def get_file_indices_from_trange(trange, hamstring_dir):
+    # getting the dates
+    start_date = np.datetime64(trange[0]).astype('datetime64[D]')
+    end_date = np.datetime64(trange[1]).astype('datetime64[D]')
+    dates_str = np.arange(start_date, end_date+1)
+
+    # finding which file indices in the hamstring folder falls within these dates
+    filenames = os.listdir(hamstring_dir)
+    # extracting the dates for each file
+    filedates = np.asarray([np.datetime64(re.split('[_]', f)[1]).astype('datetime64[D]') for f in filenames])
+
+    # slicing out only the dates which are needed for our trange
+    filedates_to_read = np.sort(filedates[np.in1d(filedates, dates_str)])
+
+    return filedates_to_read

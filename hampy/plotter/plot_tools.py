@@ -1,6 +1,6 @@
 import numpy as np
 import cdflib
-import matplotlib.pyplot as plt; plt.ion(); plt.style.use('dark_background')
+import matplotlib.pyplot as plt; plt.ion(); #plt.style.use('dark_background')
 
 from hampy import misc_functions as misc_fn
 

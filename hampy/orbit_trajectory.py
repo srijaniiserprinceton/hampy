@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 kernel_files = glob.glob("./spice_data/*.bsp")
 spice.initialize(kernel_files)
 spice.install_frame('IAU_SUN')
-plt.style.use("dark_background")
+#plt.style.use("dark_background")
 
 @u.quantity_input
 def delta_long(r:u.R_sun,

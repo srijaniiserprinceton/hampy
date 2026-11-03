@@ -2,7 +2,7 @@ import numpy as np
 import os, cdflib, re, pickle, argparse
 from tqdm import tqdm
 from scipy.interpolate import griddata
-import matplotlib.pyplot as plt; plt.style.use('dark_background')
+import matplotlib.pyplot as plt; #plt.style.use('dark_background')
 
 from hampy import load_data
 from hampy import nonjax_functions as f
