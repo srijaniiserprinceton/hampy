@@ -16,6 +16,13 @@ from hampy import encounters
 
 plt.rcParams.update({'font.size': 16})
 
+def read_credentials():
+    package_dir = os.getcwd()  # os.path.dirname(current_dir)
+    with open(f"{package_dir}/.credentials", "r") as f:
+        credentials = f.read().splitlines()
+
+    return credentials
+
 def find_enc_from_trange(trange):
     perihelion_dates = []
     for enc in range(1, 27):
@@ -546,9 +553,20 @@ def call_hamplotter(tstart, tend, og_only_flag, mincount=0, dir='.'):
 
     return global_prop_dict
 
-def plot_hamogram_trange(trange, hammertimes, FOV_dict=None, tbin_in_sec=100):
+def plot_hamogram_trange(trange, hammertimes, FOV_dict=None, tbin_in_sec=100, plotdirname=None, scale_Rsq=False):
+    CREDENTIALS = read_credentials()
     # downloading the L3 data
-    files = pyspedas.psp.spi(trange, datatype='spi_sf00_l3_mom', level='l3', notplot=True, time_clip=True, downloadonly=True, last_version=True)
+    try:
+        print('Credentials provided. Using Pyspedas loading with authentication.')
+        files = pyspedas.psp.spi(trange=trange, datatype='spi_sf00', level='L3',
+                                    time_clip=True, get_support_data= True, varnames=['*'],
+                                    notplot=True, downloadonly=True, username=CREDENTIALS[0],
+                                    password=CREDENTIALS[1])
+    except:
+        print('No credentials provided. Using Pyspedas loading without authentication.')
+        files = pyspedas.psp.spi(trange=trange, datatype='spi_sf00_l3_mom', level='l3',
+                                    time_clip=True, get_support_data= True, varnames=['*'],
+                                    notplot=True, downloadonly=True)
 
     # Check if there are multiple datasets loaded for the interval.
     if len(files) > 1:
@@ -597,18 +615,41 @@ def plot_hamogram_trange(trange, hammertimes, FOV_dict=None, tbin_in_sec=100):
 
         distRsun = (L3_data['SUN_DIST'].data * u.km).to(u.R_sun)
         Rsq = distRsun ** 2
-        ax.plot(L3_data['Epoch'].data, -B[:,1], color='green', lw=1, alpha=0.3, label='BN')
-        ax.plot(L3_data['Epoch'].data, B[:,0], color='red', lw=1, alpha=0.3, label='BT')
-        ax.plot(L3_data['Epoch'].data, -B[:,2], color='black', lw=1, alpha=0.8, label='BR')
+
+        if(scale_Rsq):
+            ax.plot(L3_data['Epoch'].data, -B[:,2] * Rsq, color='black', lw=1, alpha=1.0, label=r'$R^2 \, \mathrm{B}_{\mathrm{R}}$')
+            ax.plot(L3_data['Epoch'].data, B[:,0] * Rsq, color='#009E73', lw=1, alpha=0.5, label=r'$R^2 \, \mathrm{B}_{\mathrm{T}}$')
+            ax.plot(L3_data['Epoch'].data, -B[:,1] * Rsq, color='#D55E00', lw=1, alpha=0.5, label=r'$R^2 \, \mathrm{B}_{\mathrm{N}}$')
+        else:
+            ax.plot(L3_data['Epoch'].data, -B[:,2], color='black', lw=1, alpha=1.0, label=r'$\mathrm{B}_{\mathrm{R}}$')
+            ax.plot(L3_data['Epoch'].data, B[:,0], color='#009E73', lw=1, alpha=0.5, label=r'$\mathrm{B}_{\mathrm{T}}$')
+            ax.plot(L3_data['Epoch'].data, -B[:,1], color='#D55E00', lw=1, alpha=0.5, label=r'$\mathrm{B}_{\mathrm{N}}$')
         ax.axhline(0, color='grey')
-        ax.legend()
+        ax.legend(loc='upper left')
 
         # hammogram on B
         axt = ax.twinx()
-        axt.hist(bin_cens_dt, bins=final_bin_edges_dt, weights=bincounts_ham/bincounts, color='blue', alpha=0.6, lw=2)
-        ax.set_ylabel('BRTN [nT]')
+        axt.hist(bin_cens_dt, bins=final_bin_edges_dt, weights=bincounts_ham/bincounts, color='#0072B2', alpha=0.7, lw=2)
+        axt.tick_params(axis='y', colors='#0072B2')
+        axt.spines['right'].set_color('#0072B2')
+        axt.set_ylabel(r'$N_{\mathrm{hammerhead}}/N_{\mathrm{total}}$', color='#0072B2')
+
+        ax.set_ylabel(r'$R^2 \, \mathrm{B}_{\mathrm{RTN}}$ [nT]')
         ax.grid(True)
         ax.set_xlim([final_bin_edges_dt[0], final_bin_edges_dt[-1]])
+
+        # Put histogram behind the lines
+        ax.set_zorder(2)
+        axt.set_zorder(1)
+        ax.patch.set_visible(False)
+
+        plt.tight_layout()
+
+        if(plotdirname is None):
+            pass
+        else:
+            plt.savefig(f'{plotdirname}/hammogram_{trange[0]}-{trange[1]}.pdf')
+
 
     else:
         # in order to use the FOV dictonary, we need to know which encounter we are in
@@ -651,9 +692,16 @@ def plot_hamogram_trange(trange, hammertimes, FOV_dict=None, tbin_in_sec=100):
 
         distRsun = (L3_data['SUN_DIST'].data * u.km).to(u.R_sun)
         Rsq = distRsun ** 2
-        ax[0].plot(L3_data['Epoch'].data, -B[:,1], color='green', lw=1, alpha=0.3, label='BN')
-        ax[0].plot(L3_data['Epoch'].data, B[:,0], color='red', lw=1, alpha=0.3, label='BT')
-        ax[0].plot(L3_data['Epoch'].data, -B[:,2], color='black', lw=1, alpha=0.8, label='BR')
+
+        if(scale_Rsq):
+            ax.plot(L3_data['Epoch'].data, -B[:,2] * Rsq, color='black', lw=1, alpha=1.0, label=r'$R^2 \, \mathrm{B}_{\mathrm{R}}$')
+            ax.plot(L3_data['Epoch'].data, B[:,0] * Rsq, color='#009E73', lw=1, alpha=0.5, label=r'$R^2 \, \mathrm{B}_{\mathrm{T}}$')
+            ax.plot(L3_data['Epoch'].data, -B[:,1] * Rsq, color='#D55E00', lw=1, alpha=0.5, label=r'$R^2 \, \mathrm{B}_{\mathrm{N}}$')
+        else:
+            ax.plot(L3_data['Epoch'].data, -B[:,2], color='black', lw=1, alpha=1.0, label=r'$\mathrm{B}_{\mathrm{R}}$')
+            ax.plot(L3_data['Epoch'].data, B[:,0], color='#009E73', lw=1, alpha=0.5, label=r'$\mathrm{B}_{\mathrm{T}}$')
+            ax.plot(L3_data['Epoch'].data, -B[:,1], color='#D55E00', lw=1, alpha=0.5, label=r'$\mathrm{B}_{\mathrm{N}}$')
+
         ax[0].axhline(0, color='grey')
         ax[0].legend()
         # ax[2].plot(L3_data['Epoch'].data, rho, color='blue')
@@ -668,7 +716,7 @@ def plot_hamogram_trange(trange, hammertimes, FOV_dict=None, tbin_in_sec=100):
         # axt.hist(bin_cens_dt, bins=final_bin_edges_dt, weights=bincounts_ham/bincounts, color='blue', histtype='step', alpha=1.0, lw=2)
         axt.hist(bin_cens_dt, bins=final_bin_edges_dt, weights=bincounts_ham/bincounts, color='blue', alpha=0.6, lw=2)
 
-        ax[0].set_ylabel('BRTN [nT]')
+        ax[0].set_ylabel(r'$R^2$ BRTN [nT]')
         # ax[2].set_ylabel('n-spi [cc]')
         ax[1].set_ylabel('Hammogram')
         [axs.grid(True) for axs in ax]
@@ -689,6 +737,11 @@ def plot_hamogram_trange(trange, hammertimes, FOV_dict=None, tbin_in_sec=100):
                         fontsize=12, color='black', ha='left', va='top', fontweight='bold')
 
         plt.subplots_adjust(left=0.08, right=0.95, bottom=0.15, top=0.98)
+
+        if(plotdirname is None):
+            pass
+        else:
+            plt.savefig(f'{plotdirname}/hammogram_{trange[0]}-{trange[1]}.pdf')
 
         # # saving the hammerhead count plotting information
         # hammogram_dict = {}

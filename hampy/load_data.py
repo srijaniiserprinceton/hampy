@@ -216,16 +216,16 @@ class span:
         else:
             trange = [f'{yyyy}-{mm}-{dd}/00:00:00', f'{yyyy}-{mm}-{dd}/23:59:59']
             try:
-                print('No credentials provided. Using Pyspedas loading without authentication.')
-                spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00_l3_mom', level='l3',
-                                            time_clip=True, get_support_data= True, varnames=['*'],
-                                            notplot=True, downloadonly=True)
-            except:
                 print('Credentials provided. Using Pyspedas loading with authentication.')
                 spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00', level='L3',
                                             time_clip=True, get_support_data= True, varnames=['*'],
                                             notplot=True, downloadonly=True, username=CREDENTIALS[0],
                                             password=CREDENTIALS[1])
+            except:
+                print('No credentials provided. Using Pyspedas loading without authentication.')
+                spi_vars = pyspedas.psp.spi(trange=trange, datatype='spi_sf00_l3_mom', level='l3',
+                                            time_clip=True, get_support_data= True, varnames=['*'],
+                                            notplot=True, downloadonly=True)
             
             print('Using Pyspedas loading')
 
