@@ -6,7 +6,7 @@ from hampy import misc_functions as misc_fn
 from hampy.plotter import misc_plots
 
 # the desired time range to plot the hammogram
-trange = ['2026-09-01T00:00:00', '2026-09-05T23:59:59']
+trange = ['2025-06-19T00:00:00', '2025-06-19T23:59:59']
 # the directory containing the cdf files in the format of 'hamstring_YYYY-MM-DD_v02.cdf'
 hamstring_dir = 'cdf'
 
@@ -29,4 +29,4 @@ hammertimes = hammertimes[hamtime_startidx:hamtime_endidx+1]
 FOV_dict = None #read_pickle('FOV_dict')
 
 # plotting the within the time range
-misc_plots.plot_hamogram_trange(trange, hammertimes, FOV_dict, tbin_in_sec=600, plotdirname='figures', scale_Rsq=True)
+L3_data = misc_plots.plot_hamogram_trange(trange, hammertimes, FOV_dict, tbin_in_sec=600, plotdirname='figures', scale_Rsq=True)

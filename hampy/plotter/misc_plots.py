@@ -576,6 +576,7 @@ def plot_hamogram_trange(trange, hammertimes, FOV_dict=None, tbin_in_sec=100, pl
     xr_time_object = cdflib.epochs_astropy.CDFAstropy.convert_to_astropy(L3_data.Epoch.data)
     xr_time_array = xr_time_object.utc.datetime 
     L3_data['Epoch'] = xr_time_array
+    L3_data = L3_data.sortby('Epoch')
     L3_data = L3_data.sel(Epoch=slice(trange[0], trange[-1]))
 
     # binning the hammerheads according to tbin_in_sec
